@@ -10,6 +10,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項�
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Direct", "MessageQueue.Direct\MessageQueue.Direct.csproj", "{C5E43A61-BB32-42F7-9934-241CB918BE79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.UnitTests", "MessageQueue.UnitTests\MessageQueue.UnitTests.csproj", "{162B50C3-1C00-4049-AAE2-95751A0115C3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +24,14 @@ Global
 		{7C553D94-AD81-4099-9C8B-6416EC3302CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C553D94-AD81-4099-9C8B-6416EC3302CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C553D94-AD81-4099-9C8B-6416EC3302CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5E43A61-BB32-42F7-9934-241CB918BE79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5E43A61-BB32-42F7-9934-241CB918BE79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5E43A61-BB32-42F7-9934-241CB918BE79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5E43A61-BB32-42F7-9934-241CB918BE79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{162B50C3-1C00-4049-AAE2-95751A0115C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{162B50C3-1C00-4049-AAE2-95751A0115C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{162B50C3-1C00-4049-AAE2-95751A0115C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{162B50C3-1C00-4049-AAE2-95751A0115C3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

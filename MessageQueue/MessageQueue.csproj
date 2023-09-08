@@ -10,6 +10,7 @@
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue</Product>
+    <SqlQueryToolsConnectionString />
   </PropertyGroup>
 
   <ItemGroup>
