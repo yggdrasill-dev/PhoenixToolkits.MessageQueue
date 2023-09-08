@@ -1,0 +1,15 @@
+﻿
+# All files
+[*]
+indent_style = space
+
+# Xml files
+
+# CA2007: 請考慮對等候的工作呼叫 ConfigureAwait
+dotnet_diagnostic.CA2007.severity = none
+
+# CA2012: 正確使用 ValueTasks
+dotnet_diagnostic.CA2012.severity = none
+
+[*.xml]
+indent_size = 2
