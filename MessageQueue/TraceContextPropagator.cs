@@ -13,10 +13,10 @@ public static class TraceContextPropagator
 		try
 		{
 			if (activity?.IdFormat == ActivityIdFormat.W3C && !string.IsNullOrEmpty(activity?.Id))
-				setter(carrier, TraceParent, activity.Id!);
+				setter(carrier, TraceParent, activity.Id);
 
-			if (string.IsNullOrEmpty(activity?.TraceStateString))
-				setter(carrier, TraceState, activity!.TraceStateString!);
+			if (!string.IsNullOrEmpty(activity?.TraceStateString))
+				setter(carrier, TraceState, activity.TraceStateString);
 		}
 		catch
 		{
