@@ -1,7 +1,8 @@
 ﻿using DotNet.Globbing;
 using Microsoft.Extensions.DependencyInjection;
+using Valhalla.MessageQueue.Configuration;
 
-namespace Valhalla.MessageQueue.Configuration;
+namespace Valhalla.MessageQueue.InProcess.Configuration;
 
 public class InProcessMessageQueueConfiguration
 {

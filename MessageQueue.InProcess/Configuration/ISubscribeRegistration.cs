@@ -1,6 +1,6 @@
 ﻿using DotNet.Globbing;
 
-namespace Valhalla.MessageQueue.Configuration;
+namespace Valhalla.MessageQueue.InProcess.Configuration;
 
 internal interface ISubscribeRegistration
 {

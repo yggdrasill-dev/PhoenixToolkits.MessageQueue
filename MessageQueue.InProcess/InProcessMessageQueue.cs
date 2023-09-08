@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks.Dataflow;
 using Valhalla.MessageQueue;
 
-namespace Valhalla.MessageQueue;
+namespace Valhalla.MessageQueue.InProcess;
 
 internal class InProcessMessageQueue : IEventBus, IMessageSender
 {

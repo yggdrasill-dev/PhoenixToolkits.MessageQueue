@@ -1,4 +1,4 @@
-﻿namespace Valhalla.MessageQueue;
+﻿namespace Valhalla.MessageQueue.InProcess;
 
 public class HandlerOrProcessorNotFoundException : Exception
 {

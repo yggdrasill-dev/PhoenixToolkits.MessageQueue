@@ -1,7 +1,7 @@
 ﻿using DotNet.Globbing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Valhalla.MessageQueue.Configuration;
+namespace Valhalla.MessageQueue.InProcess.Configuration;
 
 internal class HandlerRegistration<THandler> : ISubscribeRegistration
 	where THandler : class, IMessageHandler

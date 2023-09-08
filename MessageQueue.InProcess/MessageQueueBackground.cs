@@ -4,9 +4,9 @@ using System.Reactive.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Valhalla.MessageQueue.Configuration;
+using Valhalla.MessageQueue.InProcess.Configuration;
 
-namespace Valhalla.MessageQueue;
+namespace Valhalla.MessageQueue.InProcess;
 
 internal class MessageQueueBackground : BackgroundService
 {

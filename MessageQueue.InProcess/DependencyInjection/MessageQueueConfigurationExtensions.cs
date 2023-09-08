@@ -1,5 +1,5 @@
-﻿using Valhalla.MessageQueue;
-using Valhalla.MessageQueue.Configuration;
+﻿using Valhalla.MessageQueue.Configuration;
+using Valhalla.MessageQueue.InProcess;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

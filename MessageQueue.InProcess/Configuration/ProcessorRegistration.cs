@@ -1,7 +1,7 @@
 ﻿using DotNet.Globbing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Valhalla.MessageQueue.Configuration;
+namespace Valhalla.MessageQueue.InProcess.Configuration;
 
 internal class ProcessorRegistration<TProcessor> : ISubscribeRegistration
 	where TProcessor : class, IMessageProcessor

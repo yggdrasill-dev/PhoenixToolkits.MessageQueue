@@ -1,4 +1,4 @@
-﻿namespace Valhalla.MessageQueue;
+﻿namespace Valhalla.MessageQueue.InProcess;
 internal record InProcessMessage(
 	string Subject,
 	ReadOnlyMemory<byte> Message,

@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Valhalla.MessageQueue;
+namespace Valhalla.MessageQueue.InProcess;
 
 internal static class InProcessDiagnostics
 {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Valhalla.MessageQueue;
+namespace Valhalla.MessageQueue.InProcess;
 
 internal class ExceptionHandler
 {

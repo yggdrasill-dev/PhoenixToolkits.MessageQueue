@@ -1,4 +1,4 @@
-﻿namespace Valhalla.MessageQueue;
+﻿namespace Valhalla.MessageQueue.InProcess;
 
 internal class MessageProcessorExecutor<TProcessor> : IMessageHandlerExecutor
 	where TProcessor : class, IMessageProcessor
