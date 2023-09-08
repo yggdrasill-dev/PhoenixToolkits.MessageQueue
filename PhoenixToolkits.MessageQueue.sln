@@ -20,6 +20,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.MongoDB", "Mes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.MongoDB.IntegrationTests", "MessageQueue.MongoDB.IntegrationTests\MessageQueue.MongoDB.IntegrationTests.csproj", "{F0505FB7-B779-4C55-914B-0D792ADEEF60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats", "MessageQueue.Nats\MessageQueue.Nats.csproj", "{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats.UnitTests", "MessageQueue.Nats.UnitTests\MessageQueue.Nats.UnitTests.csproj", "{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +54,14 @@ Global
 		{F0505FB7-B779-4C55-914B-0D792ADEEF60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F0505FB7-B779-4C55-914B-0D792ADEEF60}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F0505FB7-B779-4C55-914B-0D792ADEEF60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
