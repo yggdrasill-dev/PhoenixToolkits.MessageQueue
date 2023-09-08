@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Valhalla.MessageQueue</RootNamespace>
+    <PackageId>PhoenixToolkits.MessageQueue</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>Phoenix</Authors>
+    <Company>Valhalla</Company>
+    <Product>PhoenixToolkits.MessageQueue</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNet.Glob" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>
