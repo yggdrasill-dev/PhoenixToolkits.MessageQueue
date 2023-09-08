@@ -6,7 +6,22 @@
     <Nullable>enable</Nullable>
     <SqlQueryToolsConnectionString />
     <RootNamespace>Valhalla.MessageQueue.MongoDB</RootNamespace>
+    <PackageId>PhoenixToolkits.MessageQueue.MongoDB</PackageId>
+    <Product>PhoenixToolkits.MessageQueue.MongoDB</Product>
+    <Authors>Phoenix</Authors>
+    <Company>Valhalla</Company>
+    <PackageProjectUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue.git</RepositoryUrl>
+    <PackageTags>Valhalla;MessageQueue;MongoDB</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />

@@ -6,12 +6,23 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Valhalla.MessageQueue</RootNamespace>
     <PackageId>PhoenixToolkits.MessageQueue</PackageId>
-    <Version>0.0.1</Version>
+    <Version>1.0.0</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue</Product>
     <SqlQueryToolsConnectionString />
+    <PackageProjectUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue.git</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>Valhalla;MessageQueue</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DotNet.Glob" Version="3.1.3" />
