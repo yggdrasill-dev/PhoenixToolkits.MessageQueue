@@ -1,4 +1,5 @@
-﻿using Valhalla.MessageQueue;
+﻿using Microsoft.Extensions.Options;
+using Valhalla.MessageQueue;
 using Valhalla.MessageQueue.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,9 @@ public static class ServiceCollectionExtensions
 		_ = services
 			.AddSingleton<IReplyPromiseStore, ReplyPromiseStore>()
 			.AddTransient<IMessageSender>(
-				sp => new MultiplexerMessageSender(sp, configuration.GetRegisterExchanges()));
+				sp => new MultiplexerMessageSender(
+					sp,
+					sp.GetRequiredService<IOptions<MessageExchangeOptions>>().Value.Exchanges));
 
 		return configuration;
 	}
