@@ -4,5 +4,5 @@ namespace Valhalla.MessageQueue.Direct;
 
 internal class DirectDiagnostics
 {
-	public static ActivitySource ActivitySource = new("Tgs.MessageQueue.Direct");
+	public static ActivitySource ActivitySource = new("Valhalla.MessageQueue.Direct");
 }
