@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats", "Messag
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats.UnitTests", "MessageQueue.Nats.UnitTests\MessageQueue.Nats.UnitTests.csproj", "{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.RabbitMQ", "MessageQueue.RabbitMQ\MessageQueue.RabbitMQ.csproj", "{EAE92CF8-AB85-43EA-82DD-A45565FF5618}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -62,6 +64,10 @@ Global
 		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
