@@ -6,7 +6,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class MessageQueueConfigurationExtensions
 {
-	public static MessageQueueConfiguration AddInProcessGlobPatternExchange(
+	public static MessageQueueConfiguration AddDirectGlobPatternExchange(
 		this MessageQueueConfiguration configuration,
 		string glob)
 		=> configuration.AddExchange(
