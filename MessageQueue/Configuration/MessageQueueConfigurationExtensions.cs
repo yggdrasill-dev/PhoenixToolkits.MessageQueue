@@ -9,4 +9,9 @@ public static class MessageQueueConfigurationExtensions
 		string glob)
 		where TMessageSender : class, IMessageSender
 		=> configuration.AddExchange(new GlobMessageExchange<TMessageSender>(glob));
+
+	public static MessageQueueConfiguration AddNoopGlobPatternExchange(
+		this MessageQueueConfiguration configuration,
+		string glob)
+		=> configuration.AddExchange(new GlobMessageExchange<NoopMessageSender>(glob));
 }
