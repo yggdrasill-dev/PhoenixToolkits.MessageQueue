@@ -1,4 +1,5 @@
-﻿using Valhalla.MessageQueue.Exchanges;
+﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using Valhalla.MessageQueue.Exchanges;
 
 namespace Valhalla.MessageQueue.Configuration;
 
@@ -13,5 +14,8 @@ public static class MessageQueueConfigurationExtensions
 	public static MessageQueueConfiguration AddNoopGlobPatternExchange(
 		this MessageQueueConfiguration configuration,
 		string glob)
-		=> configuration.AddExchange(new GlobMessageExchange<NoopMessageSender>(glob));
+	{
+		configuration.Services.TryAddSingleton<NoopMessageSender>();
+		return configuration.AddExchange(new GlobMessageExchange<NoopMessageSender>(glob));
+	}
 }
