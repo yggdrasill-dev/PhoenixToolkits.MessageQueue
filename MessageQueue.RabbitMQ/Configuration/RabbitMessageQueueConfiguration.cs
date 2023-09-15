@@ -43,8 +43,6 @@ public class RabbitMessageQueueConfiguration
 	public RabbitMessageQueueConfiguration AddHandler(
 		Type handlerType,
 		string queueName,
-		string exchangeName,
-		string routingKey,
 		bool autoAck = true,
 		int dispatchConcurrency = 1)
 	{
@@ -52,8 +50,6 @@ public class RabbitMessageQueueConfiguration
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(
 			registrationType,
 			queueName,
-			exchangeName,
-			routingKey,
 			autoAck,
 			dispatchConcurrency)
 			?? throw new InvalidOperationException(
