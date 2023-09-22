@@ -1,6 +1,10 @@
 ﻿# 如果要從更高的目錄繼承 .editorconfig 設定，請移除以下行
 root = true
 
+[*.md]
+indent_size = 4
+indent_style = space
+
 # C# 檔案
 [*.cs]
 

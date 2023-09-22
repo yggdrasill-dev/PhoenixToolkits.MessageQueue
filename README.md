@@ -68,24 +68,24 @@ await messageSender.SendAsync(
 ```csharp
 internal class ProcessorType : IMessageProcessor
 {
-	public async ValueTask<ReadOnlyMemory<byte>> HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
-	{
-		var request = SendMessageType.Parser.ParseFrom(data.Span);
+    public async ValueTask<ReadOnlyMemory<byte>> HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
+    {
+        var request = SendMessageType.Parser.ParseFrom(data.Span);
 
-		...
+        ...
 
-		return response.ToByteArray();
-	}
+        return response.ToByteArray();
+    }
 }
 
 internal class HandlerType : IMessageHandler
 {
-	public async ValueTask HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
-	{
-		var request = SendMessageType.Parser.ParseFrom(data.Span);
+    public async ValueTask HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
+    {
+        var request = SendMessageType.Parser.ParseFrom(data.Span);
 
-		...
-	}
+        ...
+    }
 }
 ```
 
