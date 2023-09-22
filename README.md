@@ -19,7 +19,7 @@ Dependency Injection
 
 ```csharp
 builder.Services
-	.AddMessageQueue();
+    .AddMessageQueue();
 ```
 
 加入MessageQueue System的設定
