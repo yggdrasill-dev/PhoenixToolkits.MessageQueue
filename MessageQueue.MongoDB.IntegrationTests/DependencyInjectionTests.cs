@@ -34,7 +34,7 @@ public class DependencyInjectionTests
 
 		var sut = serviceProvider.GetRequiredService<MongoDBMessageQueueBuilder>();
 
-		var actual = sut.Build(serviceProvider);
+		_ = sut.Build(serviceProvider);
 	}
 
 	[Fact]

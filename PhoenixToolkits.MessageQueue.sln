@@ -3,28 +3,30 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue", "MessageQueue\MessageQueue.csproj", "{7C553D94-AD81-4099-9C8B-6416EC3302CF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue", "MessageQueue\MessageQueue.csproj", "{7C553D94-AD81-4099-9C8B-6416EC3302CF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項目", "{9C106EAC-A8F4-4C14-A62C-44A13C2B2EB7}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Direct", "MessageQueue.Direct\MessageQueue.Direct.csproj", "{C5E43A61-BB32-42F7-9934-241CB918BE79}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.Direct", "MessageQueue.Direct\MessageQueue.Direct.csproj", "{C5E43A61-BB32-42F7-9934-241CB918BE79}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.UnitTests", "MessageQueue.UnitTests\MessageQueue.UnitTests.csproj", "{162B50C3-1C00-4049-AAE2-95751A0115C3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.UnitTests", "MessageQueue.UnitTests\MessageQueue.UnitTests.csproj", "{162B50C3-1C00-4049-AAE2-95751A0115C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.InProcess", "MessageQueue.InProcess\MessageQueue.InProcess.csproj", "{7F375495-F017-4D3A-AAEC-AB961E565303}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.InProcess", "MessageQueue.InProcess\MessageQueue.InProcess.csproj", "{7F375495-F017-4D3A-AAEC-AB961E565303}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.MongoDB", "MessageQueue.MongoDB\MessageQueue.MongoDB.csproj", "{19165161-CC36-402C-8F77-E6775E225806}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.MongoDB", "MessageQueue.MongoDB\MessageQueue.MongoDB.csproj", "{19165161-CC36-402C-8F77-E6775E225806}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.MongoDB.IntegrationTests", "MessageQueue.MongoDB.IntegrationTests\MessageQueue.MongoDB.IntegrationTests.csproj", "{F0505FB7-B779-4C55-914B-0D792ADEEF60}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.MongoDB.IntegrationTests", "MessageQueue.MongoDB.IntegrationTests\MessageQueue.MongoDB.IntegrationTests.csproj", "{F0505FB7-B779-4C55-914B-0D792ADEEF60}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats", "MessageQueue.Nats\MessageQueue.Nats.csproj", "{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.Nats", "MessageQueue.Nats\MessageQueue.Nats.csproj", "{DF508AC1-5CAC-4494-BA1F-B7F297AE9B05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Nats.UnitTests", "MessageQueue.Nats.UnitTests\MessageQueue.Nats.UnitTests.csproj", "{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.Nats.UnitTests", "MessageQueue.Nats.UnitTests\MessageQueue.Nats.UnitTests.csproj", "{79FE7A6B-3CE0-4F76-9799-93D5CE52B586}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.RabbitMQ", "MessageQueue.RabbitMQ\MessageQueue.RabbitMQ.csproj", "{EAE92CF8-AB85-43EA-82DD-A45565FF5618}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.RabbitMQ", "MessageQueue.RabbitMQ\MessageQueue.RabbitMQ.csproj", "{EAE92CF8-AB85-43EA-82DD-A45565FF5618}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.InProcess.IntegrationTests", "MessageQueue.InProcess.IntegrationTests\MessageQueue.InProcess.IntegrationTests.csproj", "{2424B677-DD03-48EF-B110-906773CBE5AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,6 +70,10 @@ Global
 		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EAE92CF8-AB85-43EA-82DD-A45565FF5618}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2424B677-DD03-48EF-B110-906773CBE5AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2424B677-DD03-48EF-B110-906773CBE5AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2424B677-DD03-48EF-B110-906773CBE5AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2424B677-DD03-48EF-B110-906773CBE5AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

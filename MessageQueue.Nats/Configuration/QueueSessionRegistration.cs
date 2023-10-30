@@ -77,6 +77,7 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.Message.Header,
 			(header, key) => header[key],
@@ -111,7 +112,7 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 			await ProcessMessageAsync(
 				question,
 				handler,
-				dataInfo.CancellationToken).ConfigureAwait(false);
+				cts.Token).ConfigureAwait(false);
 		}
 		catch (Exception ex)
 		{
@@ -119,7 +120,9 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", Subject);
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())
-				await handler.HandleExceptionAsync(ex).ConfigureAwait(false);
+				await handler.HandleExceptionAsync(
+					ex,
+					cts.Token).ConfigureAwait(false);
 		}
 	}
 }

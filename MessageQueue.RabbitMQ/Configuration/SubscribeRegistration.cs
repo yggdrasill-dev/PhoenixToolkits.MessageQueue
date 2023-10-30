@@ -44,6 +44,7 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration where TH
 
 	private async Task HandleMessageAsync(MessageDataInfo dataInfo)
 	{
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.BasicProperties.Headers,
 			(headers, key) => (headers[key] as string)!,
@@ -75,7 +76,7 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration where TH
 			var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
 
 			await handler
-				.HandleAsync(dataInfo.Args.Body.ToArray(), dataInfo.CancellationToken)
+				.HandleAsync(dataInfo.Args.Body.ToArray(), cts.Token)
 				.ConfigureAwait(false);
 
 			if (!m_AutoAck)
@@ -94,7 +95,9 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration where TH
 			}
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())
-				await handler.HandleExceptionAsync(ex).ConfigureAwait(false);
+				await handler.HandleExceptionAsync(
+					ex,
+					cts.Token).ConfigureAwait(false);
 		}
 	}
 }

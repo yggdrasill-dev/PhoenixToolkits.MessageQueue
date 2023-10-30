@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -28,12 +29,12 @@ internal class MessageQueueBackground : BackgroundService
 	}
 
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
-	{
-		var subscription = m_EventBus.MessageObservable
+		=> m_EventBus.MessageObservable
 			.Do(_ => m_Logger.LogDebug("msg inbound"))
 			.Select(msg => Observable.FromAsync(() => Task.Run(
 				async () =>
 				{
+					using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
 					using var activity = TraceContextPropagator.TryExtract(
 						msg.MessageHeaders.ToLookup(hv => hv.Name, hv => hv.Value),
 						(header, key) => string.Join(", ", header[key]),
@@ -70,7 +71,7 @@ internal class MessageQueueBackground : BackgroundService
 
 						await handlerExecutor.HandleAsync(
 							msg,
-							stoppingToken).ConfigureAwait(false);
+							cts.Token).ConfigureAwait(false);
 					}
 					else
 					{
@@ -82,19 +83,15 @@ internal class MessageQueueBackground : BackgroundService
 				stoppingToken))
 				.Catch((Exception ex) => Observable.FromAsync(async () =>
 				{
+					using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
 					m_Logger.LogError(ex, "Handle message occur error.");
 
 					foreach (var handler in m_ServiceProvider.GetServices<ExceptionHandler>())
 						await handler.HandleExceptionAsync(
 							ex,
-							stoppingToken).ConfigureAwait(false);
+							cts.Token).ConfigureAwait(false);
 					return Unit.Default;
 				})))
 			.Merge()
-			.Subscribe();
-
-		_ = stoppingToken.Register(() => subscription.Dispose());
-
-		return Task.CompletedTask;
-	}
+			.ToTask();
 }

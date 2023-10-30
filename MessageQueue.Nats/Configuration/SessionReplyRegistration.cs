@@ -35,6 +35,7 @@ internal class SessionReplyRegistration : ISubscribeRegistration
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.Message.Header,
 			(header, key) => header[key],
@@ -100,7 +101,9 @@ internal class SessionReplyRegistration : ISubscribeRegistration
 			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", Subject);
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())
-				await handler.HandleExceptionAsync(ex).ConfigureAwait(false);
+				await handler.HandleExceptionAsync(
+					ex,
+					cts.Token).ConfigureAwait(false);
 		}
 	}
 }
