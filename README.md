@@ -47,7 +47,7 @@ await messageSender.PublishAsync(
     request.ToByteArray(),
     cancellationToken).ConfigureAwait(false);
 
--- or
+// or
 
 var responseData = await messageSender.RequestAsync(
     "sudject1",
@@ -56,7 +56,7 @@ var responseData = await messageSender.RequestAsync(
 
 var response = ReceiveType.Parser.ParseFrom(responseData.Span);
 
--- or
+// or
 
 await messageSender.SendAsync(
     "sudject1",
