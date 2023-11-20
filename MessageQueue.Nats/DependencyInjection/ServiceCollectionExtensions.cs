@@ -108,10 +108,6 @@ public static class ServiceCollectionExtensions
 					sp.GetRequiredService<IReplyPromiseStore>(),
 					sp.GetRequiredService<ILogger<NatsMessageQueueService>>());
 			})
-			.AddTransient<IMessageReceiver<NatsSubscriptionSettings>>(
-				sp => sp.GetRequiredService<INatsMessageQueueService>())
-			.AddTransient<IMessageReceiver<NatsQueueScriptionSettings>>(
-				sp => sp.GetRequiredService<INatsMessageQueueService>())
 			.AddHostedService<MessageQueueBackground>()
 			.AddOptions<NatsOptions>();
 	}

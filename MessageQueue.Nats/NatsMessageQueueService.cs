@@ -1,6 +1,8 @@
 ﻿using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client;
+using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
@@ -169,8 +171,33 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 		return ValueTask.FromResult<IDisposable>(subscription);
 	}
 
+	public void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	{
+		var jsm = m_Connection.CreateJetStreamManagementContext();
+
+		if (!jsm.GetStreamNames().Contains(name))
+		{
+			var builder = new StreamConfiguration.StreamConfigurationBuilder();
+			streamConfigure(builder);
+			builder.WithName(name);
+
+			jsm.AddStream(builder.Build());
+		}
+	}
+
+	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(
+		IEnumerable<JetStreamExchangeRegistration> registrations,
+		IServiceProvider serviceProvider)
+	{
+		foreach (var registration in registrations)
+			yield return ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
+				serviceProvider,
+				registration.Glob,
+				m_Connection.CreateJetStreamContext());
+	}
+
 	internal async ValueTask<Answer> InternalAskAsync(
-		string subject,
+			string subject,
 		ReadOnlyMemory<byte> data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)

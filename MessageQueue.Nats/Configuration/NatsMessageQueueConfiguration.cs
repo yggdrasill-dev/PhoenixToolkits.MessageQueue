@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Configuration;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
@@ -10,6 +11,7 @@ public class NatsMessageQueueConfiguration
 
 	private readonly MessageQueueConfiguration m_CoreConfiguration;
 	private readonly List<ISubscribeRegistration> m_SubscribeRegistrations = new();
+	private readonly List<StreamRegistration> m_StreamRegistrations = new();
 
 	public IServiceCollection Services { get; }
 
@@ -21,7 +23,10 @@ public class NatsMessageQueueConfiguration
 
 		m_CoreConfiguration = coreConfiguration;
 
-		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
+		_ = Services
+			.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations)
+			.AddSingleton<IEnumerable<StreamRegistration>>(m_StreamRegistrations);
+
 	}
 
 	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject) where THandler : IMessageHandler
@@ -193,6 +198,16 @@ public class NatsMessageQueueConfiguration
 
 		m_SubscribeRegistrations.Add(new SessionReplyRegistration(subject));
 		_ = m_CoreConfiguration.RegisterSessionReplySubject(subject);
+
+		return this;
+	}
+
+	public NatsMessageQueueConfiguration ConfigJetStream(string streamName, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	{
+		if (string.IsNullOrWhiteSpace(streamName))
+			throw new ArgumentException($"'{nameof(streamName)}' 不得為 Null 或空白字元。", nameof(streamName));
+
+		m_StreamRegistrations.Add(new StreamRegistration(streamName, streamConfigure));
 
 		return this;
 	}

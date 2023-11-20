@@ -1,4 +1,7 @@
-﻿namespace Valhalla.MessageQueue.Nats;
+﻿using NATS.Client.JetStream;
+using Valhalla.MessageQueue.Nats.Configuration;
+
+namespace Valhalla.MessageQueue.Nats;
 
 internal class NoopMessageQueueService : INatsMessageQueueService
 {
@@ -21,4 +24,13 @@ internal class NoopMessageQueueService : INatsMessageQueueService
 	public ValueTask<IDisposable> SubscribeAsync(NatsQueueScriptionSettings settings) => ValueTask.FromResult<IDisposable>(null!);
 
 	public ValueTask<IDisposable> SubscribeAsync(NatsSubscriptionSettings settings) => ValueTask.FromResult<IDisposable>(null!);
+
+	public void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	{
+	}
+
+	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(
+		IEnumerable<JetStreamExchangeRegistration> registrations,
+		IServiceProvider serviceProvider)
+		=> Array.Empty<IMessageExchange>();
 }

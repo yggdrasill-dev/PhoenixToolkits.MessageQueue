@@ -23,8 +23,8 @@ public class MultiplexerMessageSenderTests
         var sut = new MultiplexerMessageSender(
             fakeServiceProvider,
             new[] {
-                    exchange1,
-                    exchange2
+                exchange1,
+                exchange2
             });
 
         await sut.PublishAsync("test", Array.Empty<byte>());
