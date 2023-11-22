@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client;
+using NATS.Client.Internals;
 using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Nats.Configuration;
 
@@ -194,6 +195,18 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 				serviceProvider,
 				registration.Glob,
 				m_Connection.CreateJetStreamContext());
+	}
+
+	public ValueTask<IDisposable> SubscribeAsync(JetStreamSubscriptionSettings settings)
+	{
+		var js = m_Connection.CreateJetStreamContext();
+
+		return ValueTask.FromResult((IDisposable)js.PullSubscribeAsync(
+			settings.Subject,
+			settings.EventHandler,
+			PullSubscribeOptions.Builder()
+				.WithDurable(Environment.MachineName)
+				.Build()));
 	}
 
 	internal async ValueTask<Answer> InternalAskAsync(

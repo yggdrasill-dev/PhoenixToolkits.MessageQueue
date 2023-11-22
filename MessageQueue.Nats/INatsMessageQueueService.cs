@@ -7,6 +7,7 @@ internal interface INatsMessageQueueService
 	: IMessageSender
 	, IMessageReceiver<NatsSubscriptionSettings>
 	, IMessageReceiver<NatsQueueScriptionSettings>
+	, IMessageReceiver<JetStreamSubscriptionSettings>
 {
 	void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure);
 

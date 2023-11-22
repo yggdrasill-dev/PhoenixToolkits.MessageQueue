@@ -22,15 +22,13 @@ internal class QueueReplyRegistration<THandler> : ISubscribeRegistration where T
 		m_QueueSessionRegistration = new QueueSessionRegistration<InternalHandlerSession<THandler>>(subject, queue);
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(
-		IMessageReceiver<NatsSubscriptionSettings> messageReceiver,
-		IMessageReceiver<NatsQueueScriptionSettings> queueReceiver,
+	public ValueTask<IDisposable?> SubscribeAsync(
+		object receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
 		=> m_QueueSessionRegistration.SubscribeAsync(
-			messageReceiver,
-			queueReceiver,
+			receiver,
 			serviceProvider,
 			logger,
 			cancellationToken);

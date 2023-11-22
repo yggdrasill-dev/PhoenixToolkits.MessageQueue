@@ -15,23 +15,24 @@ internal class SessionReplyRegistration : ISubscribeRegistration
 		Subject = subject;
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(
-		IMessageReceiver<NatsSubscriptionSettings> messageReceiver,
-		IMessageReceiver<NatsQueueScriptionSettings> queueReceiver,
+	public async ValueTask<IDisposable?> SubscribeAsync(
+		object receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> messageReceiver.SubscribeAsync(new NatsSubscriptionSettings
-		{
-			Subject = Subject,
-			EventHandler = (sender, args) => HandleMessageAsync(new MessageDataInfo
+		=> receiver is not IMessageReceiver<NatsSubscriptionSettings> messageReceiver
+			? null
+			: await messageReceiver.SubscribeAsync(new NatsSubscriptionSettings
 			{
-				Args = args,
-				ServiceProvider = serviceProvider,
-				Logger = logger,
-				CancellationToken = cancellationToken
-			}).AsTask()
-		});
+				Subject = Subject,
+				EventHandler = (sender, args) => HandleMessageAsync(new MessageDataInfo
+				{
+					Args = args,
+					ServiceProvider = serviceProvider,
+					Logger = logger,
+					CancellationToken = cancellationToken
+				}).AsTask()
+			}).ConfigureAwait(false);
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{

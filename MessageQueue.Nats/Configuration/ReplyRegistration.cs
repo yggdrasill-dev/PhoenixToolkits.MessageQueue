@@ -17,15 +17,13 @@ internal class ReplyRegistration<THandler> : ISubscribeRegistration where THandl
 		m_SessionRegistration = new SessionRegistration<InternalHandlerSession<THandler>>(subject);
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(
-		IMessageReceiver<NatsSubscriptionSettings> messageReceiver,
-		IMessageReceiver<NatsQueueScriptionSettings> queueReceiver,
+	public ValueTask<IDisposable?> SubscribeAsync(
+		object receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
 		=> m_SessionRegistration.SubscribeAsync(
-			messageReceiver,
-			queueReceiver,
+			receiver,
 			serviceProvider,
 			logger,
 			cancellationToken);

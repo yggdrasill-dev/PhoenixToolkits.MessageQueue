@@ -4,9 +4,8 @@ namespace Valhalla.MessageQueue.Nats.Configuration;
 
 internal interface ISubscribeRegistration
 {
-	ValueTask<IDisposable> SubscribeAsync(
-		IMessageReceiver<NatsSubscriptionSettings> messageReceiver,
-		IMessageReceiver<NatsQueueScriptionSettings> queueReceiver,
+	ValueTask<IDisposable?> SubscribeAsync(
+		object receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken);

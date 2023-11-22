@@ -10,8 +10,8 @@ public class NatsMessageQueueConfiguration
 	internal static ActivitySource _NatsActivitySource = new("Valhalla.MessageQueue.Nats");
 
 	private readonly MessageQueueConfiguration m_CoreConfiguration;
-	private readonly List<ISubscribeRegistration> m_SubscribeRegistrations = new();
 	private readonly List<StreamRegistration> m_StreamRegistrations = new();
+	private readonly List<ISubscribeRegistration> m_SubscribeRegistrations = new();
 
 	public IServiceCollection Services { get; }
 
@@ -26,7 +26,6 @@ public class NatsMessageQueueConfiguration
 		_ = Services
 			.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations)
 			.AddSingleton<IEnumerable<StreamRegistration>>(m_StreamRegistrations);
-
 	}
 
 	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject) where THandler : IMessageHandler
@@ -58,6 +57,24 @@ public class NatsMessageQueueConfiguration
 	{
 		var registrationType = typeof(QueueRegistration<>).MakeGenericType(handlerType);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group)
+			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
+
+		m_SubscribeRegistrations.Add(registration);
+
+		return this;
+	}
+
+	public NatsMessageQueueConfiguration AddJetStreamHandler<THandler>(string subject) where THandler : INatsMessageHandler
+	{
+		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<THandler>(subject));
+
+		return this;
+	}
+
+	public NatsMessageQueueConfiguration AddJetStreamHandler(Type handlerType, string subject)
+	{
+		var registrationType = typeof(JetStreamHandlerRegistration<>).MakeGenericType(handlerType);
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -173,6 +190,16 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
+	public NatsMessageQueueConfiguration ConfigJetStream(string streamName, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	{
+		if (string.IsNullOrWhiteSpace(streamName))
+			throw new ArgumentException($"'{nameof(streamName)}' 不得為 Null 或空白字元。", nameof(streamName));
+
+		m_StreamRegistrations.Add(new StreamRegistration(streamName, streamConfigure));
+
+		return this;
+	}
+
 	public NatsMessageQueueConfiguration ConfigQueueOptions(Action<NatsOptions, IServiceProvider> configure)
 	{
 		_ = Services
@@ -198,16 +225,6 @@ public class NatsMessageQueueConfiguration
 
 		m_SubscribeRegistrations.Add(new SessionReplyRegistration(subject));
 		_ = m_CoreConfiguration.RegisterSessionReplySubject(subject);
-
-		return this;
-	}
-
-	public NatsMessageQueueConfiguration ConfigJetStream(string streamName, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
-	{
-		if (string.IsNullOrWhiteSpace(streamName))
-			throw new ArgumentException($"'{nameof(streamName)}' 不得為 Null 或空白字元。", nameof(streamName));
-
-		m_StreamRegistrations.Add(new StreamRegistration(streamName, streamConfigure));
 
 		return this;
 	}

@@ -93,7 +93,6 @@ public class AskModeTests
     {
         var registration = new SessionReplyRegistration("test");
         var fakeMessageReceiver = Substitute.For<IMessageReceiver<NatsSubscriptionSettings>>();
-        var fakeQueueReceiver = Substitute.For<IMessageReceiver<NatsQueueScriptionSettings>>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var serviceCollection = new ServiceCollection();
@@ -116,7 +115,6 @@ public class AskModeTests
 
         _ = await registration.SubscribeAsync(
             fakeMessageReceiver,
-            fakeQueueReceiver,
             fakeServiceProvider,
             NullLogger.Instance,
             default);

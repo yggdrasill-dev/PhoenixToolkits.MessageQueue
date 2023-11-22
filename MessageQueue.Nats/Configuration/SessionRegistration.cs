@@ -20,26 +20,27 @@ internal class SessionRegistration<TMessageSession> : ISubscribeRegistration
 		m_IsSession = isSession;
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(
-		IMessageReceiver<NatsSubscriptionSettings> messageReceiver,
-		IMessageReceiver<NatsQueueScriptionSettings> queueReceiver,
+	public async ValueTask<IDisposable?> SubscribeAsync(
+		object receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> messageReceiver.SubscribeAsync(new NatsSubscriptionSettings
-		{
-			Subject = Subject,
-			EventHandler = (sender, args) => _ = HandleMessageAsync(new MessageDataInfo
+		=> receiver is not IMessageReceiver<NatsSubscriptionSettings> messageReceiver
+			? null
+			: await messageReceiver.SubscribeAsync(new NatsSubscriptionSettings
 			{
-				Args = args,
-				ServiceProvider = serviceProvider,
-				Logger = logger,
-				CancellationToken = cancellationToken
-			}).AsTask()
-		});
+				Subject = Subject,
+				EventHandler = (sender, args) => _ = HandleMessageAsync(new MessageDataInfo
+				{
+					Args = args,
+					ServiceProvider = serviceProvider,
+					Logger = logger,
+					CancellationToken = cancellationToken
+				}).AsTask()
+			}).ConfigureAwait(false);
 
 	private static async Task ProcessMessageAsync(
-		Question question,
+			Question question,
 		TMessageSession handler,
 		CancellationToken cancellationToken)
 	{

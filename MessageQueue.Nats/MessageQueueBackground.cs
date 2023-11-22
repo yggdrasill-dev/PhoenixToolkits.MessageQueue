@@ -31,13 +31,16 @@ internal class MessageQueueBackground : BackgroundService
 		var subscriptions = new List<IDisposable>();
 
 		foreach (var registration in m_Subscribes)
-			subscriptions.Add(
-				await registration.SubscribeAsync(
-					m_NatsMessageQueueService,
-					m_NatsMessageQueueService,
-					m_ServiceProvider,
-					m_Logger,
-					stoppingToken).ConfigureAwait(false));
+		{
+			var subsctiption = await registration.SubscribeAsync(
+				m_NatsMessageQueueService,
+				m_ServiceProvider,
+				m_Logger,
+				stoppingToken).ConfigureAwait(false);
+
+			if (subsctiption is not null)
+				subscriptions.Add(subsctiption);
+		}
 
 		foreach (var registration in m_StreamRegistrations)
 			m_NatsMessageQueueService.RegisterStream(registration.Name, registration.Configure);
