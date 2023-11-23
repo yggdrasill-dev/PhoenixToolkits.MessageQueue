@@ -30,6 +30,9 @@ internal class MessageQueueBackground : BackgroundService
 	{
 		var subscriptions = new List<IDisposable>();
 
+		foreach (var registration in m_StreamRegistrations)
+			m_NatsMessageQueueService.RegisterStream(registration.Name, registration.Configure);
+
 		foreach (var registration in m_Subscribes)
 		{
 			var subsctiption = await registration.SubscribeAsync(
@@ -41,9 +44,6 @@ internal class MessageQueueBackground : BackgroundService
 			if (subsctiption is not null)
 				subscriptions.Add(subsctiption);
 		}
-
-		foreach (var registration in m_StreamRegistrations)
-			m_NatsMessageQueueService.RegisterStream(registration.Name, registration.Configure);
 
 		_ = stoppingToken.Register(() =>
 		{
