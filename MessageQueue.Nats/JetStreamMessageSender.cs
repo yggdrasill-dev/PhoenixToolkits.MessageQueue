@@ -70,7 +70,7 @@ internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 		=> throw new NotSupportedException();
 
 	public IMessageSender GetMessageSender(string subject, IServiceProvider serviceProvider)
-		=> throw new NotImplementedException();
+		=> this;
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
 		=> m_Glob.IsMatch(subject);
