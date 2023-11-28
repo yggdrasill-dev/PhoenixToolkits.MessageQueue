@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client;
-using NATS.Client.Internals;
 using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Nats.Configuration;
 
@@ -195,20 +194,28 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 				m_Connection.CreateJetStreamContext());
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(JetStreamSubscriptionSettings settings)
+	public ValueTask<IDisposable> SubscribeAsync(JetStreamPushSubscriptionSettings settings)
 	{
 		var js = m_Connection.CreateJetStreamContext();
 
-		return ValueTask.FromResult((IDisposable)js.PullSubscribeAsync(
-			settings.Subject,
-			settings.EventHandler,
-			PullSubscribeOptions.Builder()
-				.WithDurable(Environment.MachineName)
-				.Build()));
+		return string.IsNullOrEmpty(settings.SubscribeOptions.DeliverSubject)
+			? throw new NullReferenceException("DeliverSubject is null")
+			: string.IsNullOrEmpty(settings.SubscribeOptions.DeliverGroup)
+				? ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
+					settings.SubscribeOptions.DeliverSubject,
+					settings.EventHandler,
+					false,
+					settings.SubscribeOptions))
+				: ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
+					settings.SubscribeOptions.DeliverSubject,
+					settings.SubscribeOptions.DeliverGroup,
+					settings.EventHandler,
+					false,
+					settings.SubscribeOptions));
 	}
 
 	internal async ValueTask<Answer> InternalAskAsync(
-			string subject,
+				string subject,
 		ReadOnlyMemory<byte> data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)

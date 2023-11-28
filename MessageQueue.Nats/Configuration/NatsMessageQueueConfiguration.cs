@@ -64,17 +64,27 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddJetStreamHandler<THandler>(string subject) where THandler : INatsMessageHandler
+	public NatsMessageQueueConfiguration AddJetStreamPushHandler<THandler>(
+		Action<ConsumerConfiguration.ConsumerConfigurationBuilder> configure)
+		where THandler : INatsMessageHandler
 	{
-		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<THandler>(subject));
+		var builder = ConsumerConfiguration.Builder();
+		configure(builder);
+
+		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<THandler>(builder));
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddJetStreamHandler(Type handlerType, string subject)
+	public NatsMessageQueueConfiguration AddJetStreamPushHandler(
+		Type handlerType,
+		Action<ConsumerConfiguration.ConsumerConfigurationBuilder> configure)
 	{
 		var registrationType = typeof(JetStreamHandlerRegistration<>).MakeGenericType(handlerType);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
+		var builder = ConsumerConfiguration.Builder();
+		configure(builder);
+
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, builder)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);

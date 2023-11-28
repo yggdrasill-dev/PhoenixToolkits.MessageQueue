@@ -1,17 +1,18 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NATS.Client.JetStream;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
 internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 	where THandler : INatsMessageHandler
 {
-	public string Subject { get; }
+	private readonly ConsumerConfiguration.ConsumerConfigurationBuilder m_ConsumerConfigurationBuilder;
 
-	public JetStreamHandlerRegistration(string subject)
+	public JetStreamHandlerRegistration(ConsumerConfiguration.ConsumerConfigurationBuilder consumerConfigurationBuilder)
 	{
-		Subject = subject;
+		m_ConsumerConfigurationBuilder = consumerConfigurationBuilder ?? throw new ArgumentNullException(nameof(consumerConfigurationBuilder));
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -19,11 +20,11 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> receiver is not IMessageReceiver<JetStreamSubscriptionSettings> messageReceiver
+		=> receiver is not IMessageReceiver<JetStreamPushSubscriptionSettings> messageReceiver
 			? null
-			: await messageReceiver.SubscribeAsync(new JetStreamSubscriptionSettings(
-				Subject,
-				(sender, args) => _ = HandleMessageAsync(new MessageDataInfo
+			: await messageReceiver.SubscribeAsync(new JetStreamPushSubscriptionSettings(
+				m_ConsumerConfigurationBuilder.BuildPushSubscribeOptions(),
+				(sender, args) => _ = JetStreamHandlerRegistration<THandler>.HandleMessageAsync(new MessageDataInfo
 				{
 					Args = args,
 					ServiceProvider = serviceProvider,
@@ -31,7 +32,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 					CancellationToken = cancellationToken
 				}).AsTask())).ConfigureAwait(false);
 
-	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
+	private static async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
@@ -39,7 +40,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 			(header, key) => header[key],
 			out var context)
 			? NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
-				Subject,
+				dataInfo.Args.Message.Subject,
 				ActivityKind.Server,
 				context,
 				tags: new[]
@@ -49,7 +50,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 				})
 			: NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
 				ActivityKind.Server,
-				name: Subject,
+				name: dataInfo.Args.Message.Subject,
 				tags: new[]
 				{
 					new KeyValuePair<string, object?>("mq", "NATS"),
@@ -70,7 +71,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 		catch (Exception ex)
 		{
 			_ = (activity?.AddTag("error", true));
-			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", Subject);
+			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", dataInfo.Args.Message.Subject);
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())
 				await handler.HandleExceptionAsync(
