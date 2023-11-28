@@ -198,20 +198,18 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 	{
 		var js = m_Connection.CreateJetStreamContext();
 
-		return string.IsNullOrEmpty(settings.SubscribeOptions.DeliverSubject)
-			? throw new NullReferenceException("DeliverSubject is null")
-			: string.IsNullOrEmpty(settings.SubscribeOptions.DeliverGroup)
-				? ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
-					settings.SubscribeOptions.DeliverSubject,
-					settings.EventHandler,
-					false,
-					settings.SubscribeOptions))
-				: ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
-					settings.SubscribeOptions.DeliverSubject,
-					settings.SubscribeOptions.DeliverGroup,
-					settings.EventHandler,
-					false,
-					settings.SubscribeOptions));
+		return string.IsNullOrEmpty(settings.SubscribeOptions.DeliverGroup)
+			? ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
+				settings.Subject,
+				settings.EventHandler,
+				false,
+				settings.SubscribeOptions))
+			: ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
+				settings.Subject,
+				settings.SubscribeOptions.DeliverGroup,
+				settings.EventHandler,
+				false,
+				settings.SubscribeOptions));
 	}
 
 	internal async ValueTask<Answer> InternalAskAsync(

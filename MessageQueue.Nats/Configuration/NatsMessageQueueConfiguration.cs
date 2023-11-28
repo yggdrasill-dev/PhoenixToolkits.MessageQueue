@@ -65,13 +65,14 @@ public class NatsMessageQueueConfiguration
 	}
 
 	public NatsMessageQueueConfiguration AddJetStreamPushHandler<THandler>(
+		string subject,
 		Action<ConsumerConfiguration.ConsumerConfigurationBuilder> configure)
 		where THandler : INatsMessageHandler
 	{
 		var builder = ConsumerConfiguration.Builder();
 		configure(builder);
 
-		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<THandler>(builder));
+		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<THandler>(subject, builder));
 
 		return this;
 	}

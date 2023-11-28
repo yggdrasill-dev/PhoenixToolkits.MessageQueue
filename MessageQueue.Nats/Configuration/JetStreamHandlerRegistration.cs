@@ -10,8 +10,13 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 {
 	private readonly ConsumerConfiguration.ConsumerConfigurationBuilder m_ConsumerConfigurationBuilder;
 
-	public JetStreamHandlerRegistration(ConsumerConfiguration.ConsumerConfigurationBuilder consumerConfigurationBuilder)
+	public string Subject { get; }
+
+	public JetStreamHandlerRegistration(
+		string subject,
+		ConsumerConfiguration.ConsumerConfigurationBuilder consumerConfigurationBuilder)
 	{
+		Subject = subject;
 		m_ConsumerConfigurationBuilder = consumerConfigurationBuilder ?? throw new ArgumentNullException(nameof(consumerConfigurationBuilder));
 	}
 
@@ -23,8 +28,9 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 		=> receiver is not IMessageReceiver<JetStreamPushSubscriptionSettings> messageReceiver
 			? null
 			: await messageReceiver.SubscribeAsync(new JetStreamPushSubscriptionSettings(
+				Subject,
 				m_ConsumerConfigurationBuilder.BuildPushSubscribeOptions(),
-				(sender, args) => _ = JetStreamHandlerRegistration<THandler>.HandleMessageAsync(new MessageDataInfo
+				(sender, args) => _ = HandleMessageAsync(new MessageDataInfo
 				{
 					Args = args,
 					ServiceProvider = serviceProvider,
@@ -32,7 +38,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 					CancellationToken = cancellationToken
 				}).AsTask())).ConfigureAwait(false);
 
-	private static async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
+	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
@@ -40,7 +46,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 			(header, key) => header[key],
 			out var context)
 			? NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
-				dataInfo.Args.Message.Subject,
+				Subject,
 				ActivityKind.Server,
 				context,
 				tags: new[]
@@ -50,7 +56,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 				})
 			: NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
 				ActivityKind.Server,
-				name: dataInfo.Args.Message.Subject,
+				name: Subject,
 				tags: new[]
 				{
 					new KeyValuePair<string, object?>("mq", "NATS"),
@@ -71,7 +77,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 		catch (Exception ex)
 		{
 			_ = (activity?.AddTag("error", true));
-			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", dataInfo.Args.Message.Subject);
+			dataInfo.Logger.LogError(ex, "Handle {Subject} occur error.", Subject);
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())
 				await handler.HandleExceptionAsync(
