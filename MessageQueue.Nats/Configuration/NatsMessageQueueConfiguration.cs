@@ -190,12 +190,9 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration ConfigJetStream(string streamName, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	public NatsMessageQueueConfiguration ConfigJetStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
 	{
-		if (string.IsNullOrWhiteSpace(streamName))
-			throw new ArgumentException($"'{nameof(streamName)}' 不得為 Null 或空白字元。", nameof(streamName));
-
-		m_StreamRegistrations.Add(new StreamRegistration(streamName, streamConfigure));
+		m_StreamRegistrations.Add(new StreamRegistration(streamConfigure));
 
 		return this;
 	}

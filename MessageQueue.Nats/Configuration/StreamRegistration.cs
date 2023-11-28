@@ -6,11 +6,8 @@ internal class StreamRegistration
 {
 	private readonly Action<StreamConfiguration.StreamConfigurationBuilder> m_ConfigureCallback;
 
-	public string Name { get; }
-
-	public StreamRegistration(string name, Action<StreamConfiguration.StreamConfigurationBuilder> configure)
+	public StreamRegistration(Action<StreamConfiguration.StreamConfigurationBuilder> configure)
 	{
-		Name = name;
 		m_ConfigureCallback = configure;
 	}
 

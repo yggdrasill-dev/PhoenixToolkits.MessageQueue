@@ -172,18 +172,16 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 		return ValueTask.FromResult<IDisposable>(subscription);
 	}
 
-	public void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	public void RegisterStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
 	{
 		var jsm = m_Connection.CreateJetStreamManagementContext();
+		var builder = new StreamConfiguration.StreamConfigurationBuilder();
+		streamConfigure(builder);
 
-		if (!jsm.GetStreamNames().Contains(name))
-		{
-			var builder = new StreamConfiguration.StreamConfigurationBuilder();
-			streamConfigure(builder);
-			builder.WithName(name);
+		var options = builder.Build();
 
-			jsm.AddStream(builder.Build());
-		}
+		if (!jsm.GetStreamNames().Contains(options.Name))
+			jsm.AddStream(options);
 	}
 
 	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(

@@ -31,7 +31,7 @@ internal class MessageQueueBackground : BackgroundService
 		var subscriptions = new List<IDisposable>();
 
 		foreach (var registration in m_StreamRegistrations)
-			m_NatsMessageQueueService.RegisterStream(registration.Name, registration.Configure);
+			m_NatsMessageQueueService.RegisterStream(registration.Configure);
 
 		foreach (var registration in m_Subscribes)
 		{

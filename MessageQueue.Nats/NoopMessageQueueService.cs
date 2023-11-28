@@ -17,7 +17,7 @@ internal class NoopMessageQueueService : INatsMessageQueueService
 	public ValueTask PublishAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken)
 			=> ValueTask.CompletedTask;
 
-	public void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
+	public void RegisterStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
 	{
 	}
 

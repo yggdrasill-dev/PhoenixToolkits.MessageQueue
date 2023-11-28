@@ -9,7 +9,7 @@ internal interface INatsMessageQueueService
 	, IMessageReceiver<NatsQueueScriptionSettings>
 	, IMessageReceiver<JetStreamSubscriptionSettings>
 {
-	void RegisterStream(string name, Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure);
+	void RegisterStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure);
 
 	IEnumerable<IMessageExchange> BuildJetStreamExchanges(
 		IEnumerable<JetStreamExchangeRegistration> registrations,

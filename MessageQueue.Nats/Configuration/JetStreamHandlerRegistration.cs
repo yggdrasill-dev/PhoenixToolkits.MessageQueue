@@ -22,14 +22,14 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 		=> receiver is not IMessageReceiver<JetStreamSubscriptionSettings> messageReceiver
 			? null
 			: await messageReceiver.SubscribeAsync(new JetStreamSubscriptionSettings(
-			Subject,
-			(sender, args) => _ = HandleMessageAsync(new MessageDataInfo
-			{
-				Args = args,
-				ServiceProvider = serviceProvider,
-				Logger = logger,
-				CancellationToken = cancellationToken
-			}).AsTask())).ConfigureAwait(false);
+				Subject,
+				(sender, args) => _ = HandleMessageAsync(new MessageDataInfo
+				{
+					Args = args,
+					ServiceProvider = serviceProvider,
+					Logger = logger,
+					CancellationToken = cancellationToken
+				}).AsTask())).ConfigureAwait(false);
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
 	{

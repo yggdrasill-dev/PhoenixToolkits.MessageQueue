@@ -37,7 +37,7 @@ public class MultiplexerMessageSenderTests
     }
 
     [Fact]
-    public void 沒有找到任何符合的訊息交換器會發生Exception()
+    public async Task 沒有找到任何符合的訊息交換器會發生Exception()
     {
         var fakeServiceProvider = Substitute.For<IServiceProvider>();
 
@@ -45,7 +45,7 @@ public class MultiplexerMessageSenderTests
             fakeServiceProvider,
             Array.Empty<IMessageExchange>());
 
-        _ = Assert.ThrowsAsync<MessageSenderNotFoundException>(
+        _ = await Assert.ThrowsAsync<MessageSenderNotFoundException>(
             async () => await sut.PublishAsync("test", Array.Empty<byte>()));
     }
 }
