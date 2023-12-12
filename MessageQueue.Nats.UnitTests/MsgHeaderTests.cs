@@ -26,9 +26,10 @@ public class MsgHeaderTests
     [Fact]
     public void 取得錯誤會回傳所有的HeaderValues()
     {
-        var sut = new NatsHeaders();
-
-        sut[MessageHeaderValueConsts.FailHeaderKey] = "aaa";
+        var sut = new NatsHeaders
+        {
+            [MessageHeaderValueConsts.FailHeaderKey] = "aaa"
+        };
 
         var actual = sut.TryGetValue(MessageHeaderValueConsts.FailHeaderKey, out var values);
 

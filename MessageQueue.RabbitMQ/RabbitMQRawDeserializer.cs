@@ -36,13 +36,13 @@ public class RabbitMQRawDeserializer<T> : IRabbitMQDeserializer<T>
 
 		if (typeof(T) == typeof(Memory<byte>))
 		{
-			result = (T)(object)span.ToArray();
+			result = (T)(object)new Memory<byte>(span.ToArray());
 			return true;
 		}
 
 		if (typeof(T) == typeof(ReadOnlyMemory<byte>))
 		{
-			result = (T)(object)span.ToArray();
+			result = (T)(object)new ReadOnlyMemory<byte>(span.ToArray());
 			return true;
 		}
 

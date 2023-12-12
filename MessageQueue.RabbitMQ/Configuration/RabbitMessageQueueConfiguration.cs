@@ -31,11 +31,11 @@ public class RabbitMessageQueueConfiguration
 		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
 	}
 
-	public RabbitMessageQueueConfiguration AddHandler<THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
-		where THandler : IMessageHandler<ReadOnlyMemory<byte>>
+	public RabbitMessageQueueConfiguration AddHandler<TMessage, THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
+		where THandler : IMessageHandler<TMessage>
 	{
 		m_SubscribeRegistrations.Add(
-			new SubscribeRegistration<THandler>(queueName, autoAck, dispatchConcurrency));
+			new SubscribeRegistration<TMessage, THandler>(queueName, autoAck, dispatchConcurrency));
 
 		return this;
 	}
@@ -46,7 +46,15 @@ public class RabbitMessageQueueConfiguration
 		bool autoAck = true,
 		int dispatchConcurrency = 1)
 	{
-		var registrationType = typeof(SubscribeRegistration<>).MakeGenericType(handlerType);
+		var typeArguments = handlerType
+			.GetInterfaces()
+			.Where(t => t.GetGenericTypeDefinition() == typeof(IMessageHandler<>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(handlerType)
+			.ToArray();
+
+		var registrationType = typeof(SubscribeRegistration<,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(
 			registrationType,
 			queueName,

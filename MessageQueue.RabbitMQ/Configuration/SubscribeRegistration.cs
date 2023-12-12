@@ -1,11 +1,12 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Valhalla.MessageQueue.RabbitMQ.Configuration;
 
-internal class SubscribeRegistration<THandler> : ISubscribeRegistration
-	where THandler : IMessageHandler<ReadOnlyMemory<byte>>
+internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistration
+	where THandler : IMessageHandler<TMessage>
 {
 	private static readonly Random _Random = new();
 	private readonly bool m_AutoAck;
@@ -50,7 +51,7 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.BasicProperties.Headers,
-			(headers, key) => (headers[key] as string)!,
+			(headers, key) => (headers[key] as string) ?? string.Empty,
 			out var context)
 			? RabbitMQConnectionManager._RabbitMQActivitySource.StartActivity(
 				Subject,
@@ -76,9 +77,13 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration
 			await using (scope.ConfigureAwait(false))
 			{
 				var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
+				var serializeRegistration = scope.ServiceProvider.GetRequiredService<IRabbitMQSerializerRegistry>();
+				var deserializer = serializeRegistration.GetDeserializer<TMessage>();
+
+				var msg = deserializer.Deserialize(new ReadOnlySequence<byte>(dataInfo.Args.Body));
 
 				await handler
-					.HandleAsync(dataInfo.Args.Body.ToArray(), cts.Token)
+					.HandleAsync(msg!, cts.Token)
 					.ConfigureAwait(false);
 
 				if (!m_AutoAck)

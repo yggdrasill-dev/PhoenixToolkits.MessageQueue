@@ -23,7 +23,7 @@ public static class ServiceCollectitonExtensions
 	}
 
 	public static IServiceCollection AddRabbitMessageQueue(
-			this IServiceCollection services,
+		this IServiceCollection services,
 		Action<RabbitMessageQueueConfiguration> configure)
 	{
 		var configuration = new RabbitMessageQueueConfiguration(services);
@@ -54,6 +54,7 @@ public static class ServiceCollectitonExtensions
 			.AddSingleton<IMessageQueueServiceFactory, RabbitMessageQueueServiceFactory>()
 			.AddSingleton<IMessageReceiver<RabbitSubscriptionSettings>, RabbitMQConnectionManager>(
 				sp => sp.GetRequiredService<RabbitMQConnectionManager>())
+			.AddSingleton<IRabbitMQSerializerRegistry, RabbitMQSerializerRegistry>()
 			.AddHostedService<MessageQueueBackground>()
 			.AddOptions<RabbitMQOptions>();
 }
