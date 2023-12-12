@@ -99,16 +99,14 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddJetStreamHandler<TMessage, THandler>(
+	public NatsMessageQueueConfiguration AddJetStreamHandler<THandler>(
 		string subject,
 		string stream,
 		ConsumerConfig consumerConfig)
-		where THandler : INatsMessageHandler<TMessage>
 	{
-		m_SubscribeRegistrations.Add(new JetStreamHandlerRegistration<TMessage, THandler>(
-			subject,
-			stream,
-			consumerConfig));
+		var handlerType = typeof(THandler);
+
+		AddJetStreamHandler(handlerType, subject, stream, consumerConfig);
 
 		return this;
 	}

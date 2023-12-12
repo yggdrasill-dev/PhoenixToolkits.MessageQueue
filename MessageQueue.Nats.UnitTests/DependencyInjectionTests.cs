@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
+using NATS.Client.JetStream.Models;
 using Xunit;
 
 namespace MessageQueue.Nats.UnitTests;
@@ -238,5 +239,33 @@ public class DependencyInjectionTests
         sut.AddMessageQueue()
             .AddNatsMessageQueue(config => config
                 .AddSession(typeof(StubMessageSession<string>), "a.b.c", "group"));
+    }
+
+    [Fact]
+    public void 註冊一個JetStreamHandler()
+    {
+        // Arrange
+        var sut = new ServiceCollection();
+
+        // Act
+        sut.AddMessageQueue()
+            .AddNatsMessageQueue(config => config
+                .AddJetStreamHandler<StubJetStreamHandler<string>>("a.b.c", "stream", new ConsumerConfig()));
+    }
+
+    [Fact]
+    public void 以JetStreamHandlerType註冊JetStreamHandler()
+    {
+        // Arrange
+        var sut = new ServiceCollection();
+
+        // Act
+        sut.AddMessageQueue()
+            .AddNatsMessageQueue(config => config
+                .AddJetStreamHandler(
+                    typeof(StubJetStreamHandler<string>),
+                    "a.b.c",
+                    "stream",
+                    new ConsumerConfig()));
     }
 }
