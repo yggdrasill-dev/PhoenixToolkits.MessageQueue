@@ -1,34 +1,33 @@
-﻿using System.Text;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NATS.Client;
-using NATS.Client.JetStream;
+using NATS.Client.Core;
+using NATS.Client.JetStream.Models;
 using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
 internal class NatsMessageQueueService : INatsMessageQueueService
 {
-	private readonly IConnection m_Connection;
+	private readonly INatsConnectionManager m_NatsConnectionManager;
 	private readonly ILogger<NatsMessageQueueService> m_Logger;
 	private readonly IReplyPromiseStore m_ReplyPromiseStore;
 	private readonly string? m_SessionReplySubject;
 
 	public NatsMessageQueueService(
-		IConnection connection,
+		INatsConnectionManager natsConnectionManager,
 		string? sessionReplySubject,
 		IReplyPromiseStore replyPromiseStore,
 		ILogger<NatsMessageQueueService> logger)
 	{
-		m_Connection = connection ?? throw new ArgumentNullException(nameof(connection));
+		m_NatsConnectionManager = natsConnectionManager ?? throw new ArgumentNullException(nameof(natsConnectionManager));
 		m_SessionReplySubject = sessionReplySubject;
 		m_ReplyPromiseStore = replyPromiseStore ?? throw new ArgumentNullException(nameof(replyPromiseStore));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
-	public async ValueTask<Answer> AskAsync(
+	public async ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
@@ -46,48 +45,60 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 			});
 
 		if (appendHeaders.Any(value => value.Name == MessageHeaderValueConsts.SessionAskKey))
-			return await InternalAskAsync(
+			return await InternalAskAsync<TMessage, TReply>(
 				subject,
 				data,
 				appendHeaders.Where(value => value.Name != MessageHeaderValueConsts.SessionAskKey),
 				cancellationToken).ConfigureAwait(false);
 
 		m_Logger.LogDebug("Ask");
-		var msg = new Msg(subject, data.ToArray())
-		{
-			Header = MakeMsgHeader(appendHeaders)
-		};
+
+		var headers = MakeMsgHeader(appendHeaders);
 
 		if (!string.IsNullOrEmpty(m_SessionReplySubject))
-			msg.Header.Add(MessageHeaderValueConsts.SessionReplySubjectKey, m_SessionReplySubject);
+			headers.Add(MessageHeaderValueConsts.SessionReplySubjectKey, m_SessionReplySubject);
 
 		cancellationToken.ThrowIfCancellationRequested();
-		var reply = await m_Connection.RequestAsync(msg, cancellationToken).ConfigureAwait(false);
+		var reply = await m_NatsConnectionManager.Connection.RequestAsync<TMessage, TReply>(
+			subject,
+			data,
+			headers,
+			cancellationToken: cancellationToken).ConfigureAwait(false);
 
-		var responseData = reply.HasHeaders
-			&& reply.Header.GetValues(NatsMessageHeaderValueConsts.FailMessageHeaderValue.Name)?.Length > 0
-				? throw new MessageProcessFailException(reply.Data)
-				: reply.Data;
-		var replySubject = reply.HasHeaders
-			? reply.Header.GetValues(MessageHeaderValueConsts.SessionReplySubjectKey)?.FirstOrDefault()
+		if (reply.Headers?.TryGetValue(MessageHeaderValueConsts.FailHeaderKey, out var values) == true)
+			throw new MessageProcessFailException(values.ToString());
+
+		var replySubject = reply.Headers?.TryGetValue(MessageHeaderValueConsts.SessionReplySubjectKey, out var replySubjects) == true
+			? replySubjects.FirstOrDefault()
 			: null;
-		var askId = reply.HasHeaders
-			? reply.Header.GetValues(MessageHeaderValueConsts.SessionAskKey)?.FirstOrDefault()
+		var askId = reply.Headers?.TryGetValue(MessageHeaderValueConsts.SessionAskKey, out var askKeys) == true
+			? askKeys.FirstOrDefault()
 			: null;
 		var askGuid = askId != null && Guid.TryParse(askId, out var id)
 			? (Guid?)id
 			: null;
 
-		return new NatsAnswer(
-			responseData,
+		return new NatsAnswer<TReply>(
+			reply.Data!,
 			this,
 			replySubject,
 			askGuid);
 	}
 
-	public ValueTask PublishAsync(
+	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(
+		IEnumerable<JetStreamExchangeRegistration> registrations,
+		IServiceProvider serviceProvider)
+	{
+		foreach (var registration in registrations)
+			yield return ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
+				serviceProvider,
+				registration.Glob,
+				m_NatsConnectionManager.CreateJsContext());
+	}
+
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
@@ -104,26 +115,35 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 					headers.Add(new MessageHeaderValue(key, value));
 			});
 
-		var msg = new Msg(subject, data.ToArray())
+		var msg = new NatsMsg<TMessage>
 		{
-			Header = MakeMsgHeader(appendHeaders)
+			Subject = subject,
+			Data = data,
+			Headers = MakeMsgHeader(appendHeaders)
 		};
 
 		cancellationToken.ThrowIfCancellationRequested();
-		m_Connection.Publish(msg);
-
-		return ValueTask.CompletedTask;
+		return m_NatsConnectionManager.Connection.PublishAsync(msg, cancellationToken: cancellationToken);
 	}
 
-	public async ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public async ValueTask RegisterStreamAsync(StreamConfig config, CancellationToken cancellationToken = default)
+	{
+		var js = m_NatsConnectionManager.CreateJsContext();
+
+		_ = await js.UpdateStreamAsync(
+			config,
+			cancellationToken).ConfigureAwait(false);
+	}
+
+	public async ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
 		using var activity = NatsMessageQueueConfiguration._NatsActivitySource.StartActivity($"Nats Request");
 
-		var answer = await AskAsync(
+		var answer = await AskAsync<TMessage, TReply>(
 			subject,
 			data,
 			header,
@@ -131,21 +151,21 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 
 		if (answer.CanResponse)
 			await answer
-				.FailAsync(Encoding.UTF8.GetBytes("Send can't complete."), cancellationToken)
+				.FailAsync("Send can't complete.", cancellationToken)
 				.ConfigureAwait(false);
 
 		return answer.Result;
 	}
 
-	public async ValueTask SendAsync(
+	public async ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
 		using var activity = NatsMessageQueueConfiguration._NatsActivitySource.StartActivity($"Nats Send");
 
-		var answer = await AskAsync(
+		var answer = await AskAsync<TMessage, ReadOnlyMemory<byte>>(
 			subject,
 			data,
 			header,
@@ -153,75 +173,23 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 
 		if (answer.CanResponse)
 			await answer
-				.FailAsync(Encoding.UTF8.GetBytes("Send can't complete."), cancellationToken)
+				.FailAsync("Send can't complete.", cancellationToken)
 				.ConfigureAwait(false);
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(NatsQueueScriptionSettings settings)
-	{
-		var subscription = m_Connection.SubscribeAsync(settings.Subject, settings.Queue, settings.EventHandler);
+	public ValueTask<IDisposable> SubscribeAsync(INatsSubscribe settings, CancellationToken cancellationToken = default)
+		=> settings.SubscribeAsync(m_NatsConnectionManager, cancellationToken);
 
-		return ValueTask.FromResult<IDisposable>(subscription);
-	}
-
-	public ValueTask<IDisposable> SubscribeAsync(NatsSubscriptionSettings settings)
-	{
-		var subscription = m_Connection.SubscribeAsync(settings.Subject, settings.EventHandler);
-
-		return ValueTask.FromResult<IDisposable>(subscription);
-	}
-
-	public void RegisterStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure)
-	{
-		var jsm = m_Connection.CreateJetStreamManagementContext();
-		var builder = new StreamConfiguration.StreamConfigurationBuilder();
-		streamConfigure(builder);
-
-		var options = builder.Build();
-
-		if (!jsm.GetStreamNames().Contains(options.Name))
-			jsm.AddStream(options);
-	}
-
-	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(
-		IEnumerable<JetStreamExchangeRegistration> registrations,
-		IServiceProvider serviceProvider)
-	{
-		foreach (var registration in registrations)
-			yield return ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
-				serviceProvider,
-				registration.Glob,
-				m_Connection.CreateJetStreamContext());
-	}
-
-	public ValueTask<IDisposable> SubscribeAsync(JetStreamPushSubscriptionSettings settings)
-	{
-		var js = m_Connection.CreateJetStreamContext();
-
-		return string.IsNullOrEmpty(settings.SubscribeOptions.DeliverGroup)
-			? ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
-				settings.Subject,
-				settings.EventHandler,
-				false,
-				settings.SubscribeOptions))
-			: ValueTask.FromResult((IDisposable)js.PushSubscribeAsync(
-				settings.Subject,
-				settings.SubscribeOptions.DeliverGroup,
-				settings.EventHandler,
-				false,
-				settings.SubscribeOptions));
-	}
-
-	internal async ValueTask<Answer> InternalAskAsync(
-				string subject,
-		ReadOnlyMemory<byte> data,
+	internal async ValueTask<Answer<TReply>> InternalAskAsync<TMessage, TReply>(
+		string subject,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
 		using var activity = NatsMessageQueueConfiguration._NatsActivitySource.StartActivity($"Nats Internal Ask");
 
 		m_Logger.LogInformation("Internal Ask: {subject}", subject);
-		var (id, promise) = m_ReplyPromiseStore.CreatePromise(cancellationToken);
+		var (id, promise) = m_ReplyPromiseStore.CreatePromise<TReply>(cancellationToken);
 
 		var appendHeaders = new List<MessageHeaderValue>();
 
@@ -239,12 +207,12 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 		return await promise.ConfigureAwait(false);
 	}
 
-	private MsgHeader MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
+	private NatsHeaders MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
 	{
 		if (header is null)
 			throw new ArgumentNullException(nameof(header));
 
-		var msgHeader = new MsgHeader();
+		var msgHeader = new NatsHeaders();
 		foreach (var headerValue in header)
 		{
 			msgHeader.Add(headerValue.Name, headerValue.Value);

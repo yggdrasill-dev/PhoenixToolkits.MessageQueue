@@ -1,20 +1,25 @@
 ﻿namespace Valhalla.MessageQueue.Nats;
 
-internal record NatsAction : Question
+internal record NatsAction<TQuestion> : Question<TQuestion>
 {
 	public override bool CanResponse => true;
 
-	public NatsAction(ReadOnlyMemory<byte> data)
+	public NatsAction(TQuestion data)
 	{
 		Data = data;
 	}
 
-	public override ValueTask<Answer> AskAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken = default)
 		=> throw new NatsReplySubjectNullException();
 
-	public override ValueTask CompleteAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 
-	public override ValueTask FailAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask FailAsync(string data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> ValueTask.CompletedTask;
+	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 }

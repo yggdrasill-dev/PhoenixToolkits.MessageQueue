@@ -2,8 +2,8 @@
 
 namespace Valhalla.MessageQueue.Direct;
 
-internal class DirectProcessorMessageSender<TMessageProcessor> : IMessageSender
-	where TMessageProcessor : class, IMessageProcessor
+internal class DirectProcessorMessageSender<TData, TResult, TMessageProcessor> : IMessageSender
+	where TMessageProcessor : class, IMessageProcessor<TData, TResult>
 {
 	private readonly IServiceProvider m_ServiceProvider;
 
@@ -13,23 +13,23 @@ internal class DirectProcessorMessageSender<TMessageProcessor> : IMessageSender
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask PublishAsync(
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public async ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public async ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -40,20 +40,30 @@ internal class DirectProcessorMessageSender<TMessageProcessor> : IMessageSender
 		_ = (activity?.AddTag("mq", "Direct")
 			.AddTag("handler", typeof(TMessageProcessor).Name));
 
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		await using var scope = m_ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		var handler = ActivatorUtilities.CreateInstance<TMessageProcessor>(scope.ServiceProvider);
+		var scope = m_ServiceProvider.CreateAsyncScope();
+		await using (scope.ConfigureAwait(false))
+		{
+			var handler = ActivatorUtilities.CreateInstance<TMessageProcessor>(scope.ServiceProvider);
 
-		return await handler.HandleAsync(
-			data,
-			cancellationToken).ConfigureAwait(false);
+			if (data is TData messageData)
+			{
+				var result = await handler.HandleAsync(
+					messageData,
+					cancellationToken).ConfigureAwait(false);
+
+				return (TReply)(object)result!;
+			}
+			else
+			{
+				throw new InvalidCastException($"type {typeof(TMessage).Name} Can't cast type {typeof(TData).Name}");
+			}
+		}
 	}
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException();
+		=> throw new NotSupportedException();
 }

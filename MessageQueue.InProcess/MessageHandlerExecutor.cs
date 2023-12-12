@@ -1,7 +1,7 @@
 ﻿namespace Valhalla.MessageQueue.InProcess;
 
-internal class MessageHandlerExecutor<THandler> : IMessageHandlerExecutor
-	where THandler : class, IMessageHandler
+internal class MessageHandlerExecutor<TMessage, THandler> : IMessageHandlerExecutor
+	where THandler : class, IMessageHandler<TMessage>
 {
 	private readonly THandler m_Handler;
 
@@ -13,9 +13,9 @@ internal class MessageHandlerExecutor<THandler> : IMessageHandlerExecutor
 	public async ValueTask HandleAsync(InProcessMessage message, CancellationToken cancellationToken = default)
 	{
 		await m_Handler.HandleAsync(
-			message.Message,
+			(TMessage)message.Message!,
 			cancellationToken).ConfigureAwait(false);
 
-		message.CompletionSource.SetResult(Array.Empty<byte>());
+		message.CompletionSource.SetResult(null);
 	}
 }

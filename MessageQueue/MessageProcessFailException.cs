@@ -2,14 +2,14 @@
 
 public class MessageProcessFailException : Exception
 {
-	public byte[]? ResponseData { get; }
+	public string? ResponseData { get; }
 
 	public MessageProcessFailException()
 		: this(null)
 	{
 	}
 
-	public MessageProcessFailException(byte[]? responseData)
+	public MessageProcessFailException(string? responseData)
 		: base("MessageQueue remote process fail.")
 	{
 		ResponseData = responseData;

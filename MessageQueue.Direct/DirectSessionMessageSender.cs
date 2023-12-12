@@ -2,8 +2,8 @@
 
 namespace Valhalla.MessageQueue.Direct;
 
-internal class DirectSessionMessageSender<TMessageSession> : IMessageSender
-	where TMessageSession : IMessageSession
+internal class DirectSessionMessageSender<TQuestion, TMessageSession> : IMessageSender
+	where TMessageSession : IMessageSession<TQuestion>
 {
 	private readonly IServiceProvider m_ServiceProvider;
 
@@ -13,7 +13,11 @@ internal class DirectSessionMessageSender<TMessageSession> : IMessageSender
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 	}
 
-	public async ValueTask<Answer> AskAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public async ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
+		string subject,
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken = default)
 	{
 		using var activity = DirectDiagnostics.ActivitySource.StartActivity($"Direct Ask");
 		using var questionActivity = DirectDiagnostics.ActivitySource.StartActivity(subject);
@@ -21,37 +25,38 @@ internal class DirectSessionMessageSender<TMessageSession> : IMessageSender
 		_ = (questionActivity?.AddTag("mq", "Direct")
 			.AddTag("handler", typeof(TMessageSession).Name));
 
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		await using var scope = m_ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
+		var scope = m_ServiceProvider.CreateAsyncScope();
+		await using (scope.ConfigureAwait(false))
+		{
+			var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
 
-		var question = new DirectQuestion();
+			var question = new DirectQuestion<TQuestion>((TQuestion)(object)data!);
 
-		_ = Task.Run(() => handler.HandleAsync(
-			question,
-			cancellationToken).AsTask(), cancellationToken);
+			_ = Task.Run(() => handler.HandleAsync(
+				question,
+				cancellationToken).AsTask(), cancellationToken);
 
-		return await question.GetAnwserAsync().ConfigureAwait(false);
+			return await question.GetAnwserAsync<TReply>().ConfigureAwait(false);
+		}
 	}
 
-	public ValueTask PublishAsync(
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();

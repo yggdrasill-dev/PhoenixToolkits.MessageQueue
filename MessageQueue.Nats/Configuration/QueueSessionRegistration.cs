@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistration
-	where TMessageSession : IMessageSession
+internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeRegistration
+	where TMessageSession : IMessageSession<TMessage>
 {
 	private readonly bool m_IsSession;
 
@@ -26,27 +26,26 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
-		object receiver,
+		IMessageReceiver<INatsSubscribe> receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> receiver is not IMessageReceiver<NatsQueueScriptionSettings> queueReceiver
-			? null
-			: await queueReceiver.SubscribeAsync(new NatsQueueScriptionSettings
+		=> await receiver.SubscribeAsync(
+			new NatsQueueScriptionSettings<TMessage>
 			{
 				Subject = Subject,
 				Queue = Queue,
-				EventHandler = (sender, args) => HandleMessageAsync(new MessageDataInfo
-				{
-					Args = args,
-					ServiceProvider = serviceProvider,
-					Logger = logger,
-					CancellationToken = cancellationToken
-				}).AsTask()
-			}).ConfigureAwait(false);
+				EventHandler = (args, ct) => HandleMessageAsync(
+					new MessageDataInfo<NatsMsg<TMessage>>(
+						args,
+						logger,
+						serviceProvider),
+					ct)
+			},
+			cancellationToken).ConfigureAwait(false);
 
 	private static async Task ProcessMessageAsync(
-			Question question,
+		Question<TMessage> question,
 		TMessageSession handler,
 		CancellationToken cancellationToken)
 	{
@@ -56,32 +55,32 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 				.HandleAsync(question, cancellationToken)
 				.ConfigureAwait(false);
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
 			if (question.CanResponse)
 				await question.FailAsync(
-					Encoding.UTF8.GetBytes(ex.ToString()),
+					"Process message occur error",
 					cancellationToken).ConfigureAwait(false);
 
 			throw;
 		}
 	}
 
-	private Question CreateQuestion(MessageDataInfo dataInfo, INatsMessageQueueService natsSender)
-			=> m_IsSession
-			? new NatsQuestion(
-				dataInfo.Args.Message.Data,
+	private Question<TMessage> CreateQuestion(MessageDataInfo<NatsMsg<TMessage>> dataInfo, INatsMessageQueueService natsSender)
+		=> m_IsSession
+			? new NatsQuestion<TMessage>(
+				dataInfo.Msg.Data!,
 				natsSender,
-				dataInfo.Args.Message.Reply)
-			: new NatsAction(
-				dataInfo.Args.Message.Data);
+				dataInfo.Msg.ReplyTo)
+			: new NatsAction<TMessage>(
+				dataInfo.Msg.Data!);
 
-	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
+	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<TMessage>> dataInfo, CancellationToken cancellationToken)
 	{
-		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
-			dataInfo.Args.Message.Header,
-			(header, key) => header[key],
+			dataInfo.Msg.Headers,
+			(header, key) => (header?[key] ?? string.Empty)!,
 			out var context)
 			? NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
 				Subject,
@@ -103,17 +102,18 @@ internal class QueueSessionRegistration<TMessageSession> : ISubscribeRegistratio
 
 		try
 		{
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-			await using var scope = dataInfo.ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-			var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
-			var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
-			var question = CreateQuestion(dataInfo, natsSender);
+			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
+			await using (scope.ConfigureAwait(false))
+			{
+				var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
+				var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
+				var question = CreateQuestion(dataInfo, natsSender);
 
-			await ProcessMessageAsync(
-				question,
-				handler,
-				cts.Token).ConfigureAwait(false);
+				await ProcessMessageAsync(
+					question,
+					handler,
+					cts.Token).ConfigureAwait(false);
+			}
 		}
 		catch (Exception ex)
 		{

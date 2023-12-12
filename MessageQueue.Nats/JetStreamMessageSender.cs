@@ -1,6 +1,6 @@
 ﻿using DotNet.Globbing;
 using Microsoft.Extensions.Logging;
-using NATS.Client;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Nats.Configuration;
 
@@ -9,26 +9,26 @@ namespace Valhalla.MessageQueue.Nats;
 internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 {
 	private readonly Glob m_Glob;
-	private readonly IJetStream m_JetStream;
+	private readonly INatsJSContext m_JetStream;
 	private readonly ILogger<JetStreamMessageSender> m_Logger;
 
-	public JetStreamMessageSender(string glob, IJetStream jetStream, ILogger<JetStreamMessageSender> logger)
+	public JetStreamMessageSender(string glob, INatsJSContext jetStream, ILogger<JetStreamMessageSender> logger)
 	{
 		m_Glob = Glob.Parse(glob);
 		m_JetStream = jetStream ?? throw new ArgumentNullException(nameof(jetStream));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public async ValueTask PublishAsync(
+	public async ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -45,26 +45,25 @@ internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 					headers.Add(new MessageHeaderValue(key, value));
 			});
 
-		var msg = new Msg(subject, data.ToArray())
-		{
-			Header = MakeMsgHeader(appendHeaders)
-		};
+		var ack = await m_JetStream.PublishAsync(
+			subject,
+			data,
+			headers: MakeMsgHeader(appendHeaders),
+			cancellationToken: cancellationToken).ConfigureAwait(false);
 
-		cancellationToken.ThrowIfCancellationRequested();
-		_ = await m_JetStream.PublishAsync(
-			msg).ConfigureAwait(false);
+		ack.EnsureSuccess();
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
@@ -75,11 +74,11 @@ internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
 		=> m_Glob.IsMatch(subject);
 
-	private MsgHeader MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
+	private NatsHeaders MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
 	{
 		ArgumentNullException.ThrowIfNull(header, nameof(header));
 
-		var msgHeader = new MsgHeader();
+		var msgHeader = new NatsHeaders();
 		foreach (var headerValue in header)
 		{
 			msgHeader.Add(headerValue.Name, headerValue.Value);

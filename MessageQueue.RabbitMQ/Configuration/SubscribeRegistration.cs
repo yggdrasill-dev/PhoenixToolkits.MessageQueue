@@ -4,7 +4,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Valhalla.MessageQueue.RabbitMQ.Configuration;
 
-internal class SubscribeRegistration<THandler> : ISubscribeRegistration where THandler : IMessageHandler
+internal class SubscribeRegistration<THandler> : ISubscribeRegistration
+	where THandler : IMessageHandler<ReadOnlyMemory<byte>>
 {
 	private static readonly Random _Random = new();
 	private readonly bool m_AutoAck;
@@ -27,20 +28,22 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration where TH
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> messageReceiver.SubscribeAsync(new RabbitSubscriptionSettings
-		{
-			Subject = Subject,
-			AutoAck = m_AutoAck,
-			ConsumerDispatchConcurrency = m_DispatchConcurrency,
-			EventHandler = (model, args) => HandleMessageAsync(new MessageDataInfo
+		=> messageReceiver.SubscribeAsync(
+			new RabbitSubscriptionSettings
 			{
-				Args = args,
-				ServiceProvider = serviceProvider,
-				Logger = logger,
-				CancellationToken = cancellationToken,
-				Channel = model
-			})
-		});
+				Subject = Subject,
+				AutoAck = m_AutoAck,
+				ConsumerDispatchConcurrency = m_DispatchConcurrency,
+				EventHandler = (model, args) => HandleMessageAsync(new MessageDataInfo
+				{
+					Args = args,
+					ServiceProvider = serviceProvider,
+					Logger = logger,
+					CancellationToken = cancellationToken,
+					Channel = model
+				})
+			},
+			cancellationToken);
 
 	private async Task HandleMessageAsync(MessageDataInfo dataInfo)
 	{
@@ -69,18 +72,18 @@ internal class SubscribeRegistration<THandler> : ISubscribeRegistration where TH
 
 		try
 		{
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-			await using var scope = dataInfo.ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
+			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
+			await using (scope.ConfigureAwait(false))
+			{
+				var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
 
-			var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
+				await handler
+					.HandleAsync(dataInfo.Args.Body.ToArray(), cts.Token)
+					.ConfigureAwait(false);
 
-			await handler
-				.HandleAsync(dataInfo.Args.Body.ToArray(), cts.Token)
-				.ConfigureAwait(false);
-
-			if (!m_AutoAck)
-				dataInfo.Channel.BasicAck(dataInfo.Args.DeliveryTag, false);
+				if (!m_AutoAck)
+					dataInfo.Channel.BasicAck(dataInfo.Args.DeliveryTag, false);
+			}
 		}
 		catch (Exception ex)
 		{

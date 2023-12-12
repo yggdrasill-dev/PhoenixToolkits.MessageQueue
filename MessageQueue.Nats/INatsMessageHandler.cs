@@ -1,8 +1,8 @@
-﻿using NATS.Client;
+﻿using NATS.Client.JetStream;
 
 namespace Valhalla.MessageQueue.Nats;
 
-public interface INatsMessageHandler
+public interface INatsMessageHandler<TMessage>
 {
-	ValueTask HandleAsync(MsgHandlerEventArgs args, CancellationToken cancellationToken = default);
+	ValueTask HandleAsync(NatsJSMsg<TMessage> msg, CancellationToken cancellationToken = default);
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NATS.Client.JetStream.Models;
 using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
@@ -10,13 +11,13 @@ internal class MessageQueueBackground : BackgroundService
 	private readonly INatsMessageQueueService m_NatsMessageQueueService;
 	private readonly IServiceProvider m_ServiceProvider;
 	private readonly IEnumerable<ISubscribeRegistration> m_Subscribes;
-	private readonly IEnumerable<StreamRegistration> m_StreamRegistrations;
+	private readonly IEnumerable<StreamConfig> m_StreamRegistrations;
 
 	public MessageQueueBackground(
 		INatsMessageQueueService natsMessageQueueService,
 		IServiceProvider serviceProvider,
 		IEnumerable<ISubscribeRegistration> subscribes,
-		IEnumerable<StreamRegistration> streamRegistrations,
+		IEnumerable<StreamConfig> streamRegistrations,
 		ILogger<MessageQueueBackground> logger)
 	{
 		m_NatsMessageQueueService = natsMessageQueueService ?? throw new ArgumentNullException(nameof(natsMessageQueueService));
@@ -30,8 +31,10 @@ internal class MessageQueueBackground : BackgroundService
 	{
 		var subscriptions = new List<IDisposable>();
 
-		foreach (var registration in m_StreamRegistrations)
-			m_NatsMessageQueueService.RegisterStream(registration.Configure);
+		foreach (var config in m_StreamRegistrations)
+			await m_NatsMessageQueueService.RegisterStreamAsync(
+				config,
+				stoppingToken).ConfigureAwait(false);
 
 		foreach (var registration in m_Subscribes)
 		{
@@ -45,10 +48,9 @@ internal class MessageQueueBackground : BackgroundService
 				subscriptions.Add(subsctiption);
 		}
 
-		_ = stoppingToken.Register(() =>
-		{
-			foreach (var sub in subscriptions)
-				sub.Dispose();
-		});
+		await stoppingToken.ConfigureAwait(false);
+
+		foreach (var sub in subscriptions)
+			sub.Dispose();
 	}
 }

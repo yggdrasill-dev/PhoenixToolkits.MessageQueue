@@ -1,24 +1,29 @@
-﻿using System.Threading.Tasks.Dataflow;
-using Valhalla.MessageQueue;
+﻿using Valhalla.Messages;
 
 namespace Valhalla.MessageQueue.InProcess;
 
-internal class InProcessMessageQueue : IEventBus, IMessageSender
+internal class InProcessMessageQueue : IMessageSender
 {
-	private readonly BroadcastBlock<InProcessMessage> m_BroadcastBlock = new(null);
+	private readonly IEventPublisher<InProcessMessage> m_Publisher;
 
-	public IObservable<InProcessMessage> MessageObservable => m_BroadcastBlock.AsObservable();
+	public InProcessMessageQueue(IEventBus eventBus)
+	{
+		ArgumentNullException.ThrowIfNull(eventBus, nameof(eventBus));
 
-	public ValueTask<Answer> AskAsync(
+		m_Publisher = eventBus.GetEventPublisher<InProcessMessage>(EventBusNames.InProcessEventBusName)
+			?? throw new KeyNotFoundException($"{EventBusNames.InProcessEventBusName} event publisher not found");
+	}
+
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public async ValueTask PublishAsync(
+	public async ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -37,18 +42,18 @@ internal class InProcessMessageQueue : IEventBus, IMessageSender
 
 		var msg = new InProcessMessage(
 			subject,
-			data.ToArray(),
+			data,
 			appendHeaders,
 			new());
 
-		_ = await m_BroadcastBlock.SendAsync(
+		_ = await m_Publisher.PublishAsync(
 			msg,
 			cancellationToken).ConfigureAwait(false);
 	}
 
-	public async ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public async ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -67,20 +72,21 @@ internal class InProcessMessageQueue : IEventBus, IMessageSender
 
 		var msg = new InProcessMessage(
 			subject,
-			data.ToArray(),
+			data,
 			appendHeaders,
 			new());
 
-		_ = await m_BroadcastBlock.SendAsync(
+		_ = await m_Publisher.PublishAsync(
 			msg,
 			cancellationToken).ConfigureAwait(false);
 
-		return await msg.CompletionSource.Task.ConfigureAwait(false);
+		var result = await msg.CompletionSource.Task.ConfigureAwait(false);
+		return (TReply)result!;
 	}
 
-	public async ValueTask SendAsync(
+	public async ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -99,11 +105,11 @@ internal class InProcessMessageQueue : IEventBus, IMessageSender
 
 		var msg = new InProcessMessage(
 			subject,
-			data.ToArray(),
+			data,
 			appendHeaders,
 			new());
 
-		_ = await m_BroadcastBlock.SendAsync(
+		_ = await m_Publisher.PublishAsync(
 			msg,
 			cancellationToken).ConfigureAwait(false);
 

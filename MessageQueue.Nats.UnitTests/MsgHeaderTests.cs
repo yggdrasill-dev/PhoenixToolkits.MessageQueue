@@ -1,4 +1,6 @@
 ﻿using NATS.Client;
+using NATS.Client.Core;
+using Valhalla.MessageQueue;
 using Valhalla.MessageQueue.Nats;
 
 namespace MessageQueue.Nats.UnitTests;
@@ -8,39 +10,29 @@ public class MsgHeaderTests
     [Fact]
     public void 從Msg檢查Header有沒有值()
     {
-        var sut = new Msg
+        var sut = new NatsMsg<string>
         {
-            Header = new MsgHeader()
+            Headers = new NatsHeaders()
         };
 
-        var headerValue = NatsMessageHeaderValueConsts.FailMessageHeaderValue;
+        var headerValue = MessageHeaderValueConsts.FailHeaderKey;
 
-        sut.Header.Add(headerValue.Name, headerValue.Value);
+        sut.Headers.Add(headerValue, "aaa");
 
-        Assert.True(sut.HasHeaders);
-    }
+        Assert.True(sut.Headers.ContainsKey(headerValue));
 
-    [Fact]
-    public void 如果沒有設定FailHeader_檢查有無錯誤應該回傳空陣列()
-    {
-        var sut = new MsgHeader();
-
-        var actual = sut.GetValues(NatsMessageHeaderValueConsts.FailMessageHeaderValue.Name);
-
-        Assert.False(actual?.Length > 0);
     }
 
     [Fact]
     public void 取得錯誤會回傳所有的HeaderValues()
     {
-        var sut = new MsgHeader();
+        var sut = new NatsHeaders();
 
-        var headerValue = NatsMessageHeaderValueConsts.FailMessageHeaderValue;
+        sut[MessageHeaderValueConsts.FailHeaderKey] = "aaa";
 
-        sut.Add(headerValue.Name, headerValue.Value);
+        var actual = sut.TryGetValue(MessageHeaderValueConsts.FailHeaderKey, out var values);
 
-        var actual = sut.GetValues(headerValue.Name);
-
-        Assert.True(actual?.Length > 0);
+        Assert.True(actual);
+        Assert.Equal("aaa", values.ToString());
     }
 }

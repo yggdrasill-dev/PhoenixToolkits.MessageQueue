@@ -15,8 +15,9 @@ public static class ServiceCollectionExtensions
 		configure(inProcessConfiguration);
 
 		_ = configuration.Services
+			.AddEventBus(configuration => configuration
+				.RegisterEventSource<InProcessMessage>(EventBusNames.InProcessEventBusName))
 			.AddSingleton<InProcessMessageQueue>()
-			.AddSingleton<IEventBus>(sp => sp.GetRequiredService<InProcessMessageQueue>())
 			.AddHostedService<MessageQueueBackground>();
 
 		return configuration;

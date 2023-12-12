@@ -2,9 +2,10 @@
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class QueueReplyRegistration<THandler> : ISubscribeRegistration where THandler : IMessageHandler
+internal class QueueReplyRegistration<TMessage, THandler> : ISubscribeRegistration
+	where THandler : IMessageHandler<TMessage>
 {
-	private readonly QueueSessionRegistration<InternalHandlerSession<THandler>> m_QueueSessionRegistration;
+	private readonly QueueSessionRegistration<TMessage, InternalHandlerSession<TMessage, THandler>> m_QueueSessionRegistration;
 
 	public string Queue { get; }
 
@@ -19,11 +20,11 @@ internal class QueueReplyRegistration<THandler> : ISubscribeRegistration where T
 		Subject = subject;
 		Queue = queue;
 
-		m_QueueSessionRegistration = new QueueSessionRegistration<InternalHandlerSession<THandler>>(subject, queue);
+		m_QueueSessionRegistration = new QueueSessionRegistration<TMessage, InternalHandlerSession<TMessage, THandler>>(subject, queue);
 	}
 
 	public ValueTask<IDisposable?> SubscribeAsync(
-		object receiver,
+		IMessageReceiver<INatsSubscribe> receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)

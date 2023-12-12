@@ -14,16 +14,16 @@ internal class MongoDbMessageQueueService : IMessageSender
 		m_QueueName = queueName ?? throw new ArgumentNullException(nameof(queueName));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	public async ValueTask PublishAsync(
+	public async ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
@@ -31,10 +31,11 @@ internal class MongoDbMessageQueueService : IMessageSender
 
 		cancellationToken.ThrowIfCancellationRequested();
 
-		var mongoMsg = new MongoMessage
+		var mongoMsg = new MongoMessage<TMessage>
 		{
 			Subject = subject,
-			Data = data.ToArray()
+			Data = data,
+			Headers = header.ToArray()
 		};
 
 		TraceContextPropagator.Inject(
@@ -55,23 +56,22 @@ internal class MongoDbMessageQueueService : IMessageSender
 					}
 			});
 
-		var message = await m_MongoMessageQueue.Publish(
-			m => m
-				.Queue(m_QueueName)
-				.Data(mongoMsg)
-				.Correlation(Guid.NewGuid().ToString())).ConfigureAwait(false);
+		var message = await m_MongoMessageQueue.Publish(m => m
+			.Queue(m_QueueName)
+			.Data(mongoMsg)
+			.Correlation(Guid.NewGuid().ToString())).ConfigureAwait(false);
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();

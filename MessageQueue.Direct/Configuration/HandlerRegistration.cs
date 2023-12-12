@@ -3,8 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Valhalla.MessageQueue.Direct.Configuration;
 
-internal class HandlerRegistration<THandler> : ISubscribeRegistration
-	where THandler : class, IMessageHandler
+internal class HandlerRegistration<TMessage, THandler> : ISubscribeRegistration
+	where THandler : class, IMessageHandler<TMessage>
 {
 	public Glob SubjectGlob { get; }
 
@@ -14,5 +14,5 @@ internal class HandlerRegistration<THandler> : ISubscribeRegistration
 	}
 
 	public IMessageSender ResolveMessageSender(IServiceProvider serviceProvider)
-		=> serviceProvider.GetRequiredService<DirectHandlerMessageSender<THandler>>();
+		=> serviceProvider.GetRequiredService<DirectHandlerMessageSender<TMessage, THandler>>();
 }

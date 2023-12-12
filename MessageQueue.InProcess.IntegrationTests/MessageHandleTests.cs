@@ -15,7 +15,7 @@ public class MessageHandleTests
             .AddSingleton<PromiseStore>()
             .AddMessageQueue()
             .AddInProcessMessageQueue(configuration => configuration
-                .AddHandler<StubMessageHandler>("test"))
+                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("test"))
             .AddInProcessGlobPatternExchange("*");
 
         using var app = host.Build();
@@ -32,7 +32,7 @@ public class MessageHandleTests
 
         var (id, promise) = promiseStore.CreatePromise(promiseCts.Token);
 
-        await msgSender.PublishAsync("test", id.ToByteArray());
+        await msgSender.PublishAsync("test", (ReadOnlyMemory<byte>)id.ToByteArray());
 
         await promise;
     }

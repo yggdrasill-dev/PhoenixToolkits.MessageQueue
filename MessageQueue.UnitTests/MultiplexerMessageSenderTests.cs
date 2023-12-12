@@ -1,5 +1,6 @@
 ﻿using NSubstitute;
 using Valhalla.MessageQueue;
+using Xunit;
 
 namespace MessageQueue.UnitTests;
 

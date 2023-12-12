@@ -1,6 +1,6 @@
 ﻿namespace Valhalla.MessageQueue;
 
-public interface IMessageProcessor
+public interface IMessageProcessor<in TMessage, TReply>
 {
-	ValueTask<ReadOnlyMemory<byte>> HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default);
+	ValueTask<TReply> HandleAsync(TMessage data, CancellationToken cancellationToken = default);
 }

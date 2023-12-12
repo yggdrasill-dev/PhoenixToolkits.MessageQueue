@@ -26,7 +26,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.Nats.UnitTests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.RabbitMQ", "MessageQueue.RabbitMQ\MessageQueue.RabbitMQ.csproj", "{EAE92CF8-AB85-43EA-82DD-A45565FF5618}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.InProcess.IntegrationTests", "MessageQueue.InProcess.IntegrationTests\MessageQueue.InProcess.IntegrationTests.csproj", "{2424B677-DD03-48EF-B110-906773CBE5AE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.InProcess.IntegrationTests", "MessageQueue.InProcess.IntegrationTests\MessageQueue.InProcess.IntegrationTests.csproj", "{2424B677-DD03-48EF-B110-906773CBE5AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

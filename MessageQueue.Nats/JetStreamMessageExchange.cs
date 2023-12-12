@@ -18,16 +18,16 @@ internal class JetStreamMessageExchange : IMessageSender
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask PublishAsync(
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -41,16 +41,16 @@ internal class JetStreamMessageExchange : IMessageSender
 		return sender.PublishAsync(subject, data, header, cancellationToken);
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();

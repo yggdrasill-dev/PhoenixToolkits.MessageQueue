@@ -15,9 +15,9 @@ internal class MultiplexerMessageSender : IMessageSender, IMessageExchange
 		m_Exchanges = (exchanges ?? throw new ArgumentNullException(nameof(exchanges))).ToArray();
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
@@ -28,14 +28,18 @@ internal class MultiplexerMessageSender : IMessageSender, IMessageExchange
 
 		cancellationToken.ThrowIfCancellationRequested();
 
-		return sender.AskAsync(subject, data, header, cancellationToken);
+		return sender.AskAsync<TMessage, TReply>(subject, data, header, cancellationToken);
 	}
 
 	public IMessageSender GetMessageSender(string pattern, IServiceProvider serviceProvider) => this;
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header) => true;
 
-	public ValueTask PublishAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken)
+	public ValueTask PublishAsync<TMessage>(
+		string subject,
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken)
 	{
 		using var activity = _SenderActivitySource.StartActivity($"{nameof(MultiplexerMessageSender)}.{nameof(PublishAsync)}");
 		_ = (activity?.AddTag("subject", subject));
@@ -47,7 +51,11 @@ internal class MultiplexerMessageSender : IMessageSender, IMessageExchange
 		return sender.PublishAsync(subject, data, header, cancellationToken);
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken)
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
+		string subject,
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken)
 	{
 		using var activity = _SenderActivitySource.StartActivity($"{nameof(MultiplexerMessageSender)}.{nameof(RequestAsync)}");
 		_ = (activity?.AddTag("subject", subject));
@@ -56,12 +64,12 @@ internal class MultiplexerMessageSender : IMessageSender, IMessageExchange
 
 		cancellationToken.ThrowIfCancellationRequested();
 
-		return sender.RequestAsync(subject, data, header, cancellationToken);
+		return sender.RequestAsync<TMessage, TReply>(subject, data, header, cancellationToken);
 	}
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{

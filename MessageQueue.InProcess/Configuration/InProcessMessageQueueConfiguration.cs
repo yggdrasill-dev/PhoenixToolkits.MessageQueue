@@ -1,4 +1,5 @@
-﻿using DotNet.Globbing;
+﻿using System.Reflection;
+using DotNet.Globbing;
 using Microsoft.Extensions.DependencyInjection;
 using Valhalla.MessageQueue.Configuration;
 
@@ -17,16 +18,24 @@ public class InProcessMessageQueueConfiguration
 		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
 	}
 
-	public InProcessMessageQueueConfiguration AddHandler<THandler>(string subject) where THandler : class, IMessageHandler
+	public InProcessMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject)
+		where THandler : class, IMessageHandler<TMessage>
 	{
-		m_SubscribeRegistrations.Add(new HandlerRegistration<THandler>(Glob.Parse(subject)));
+		m_SubscribeRegistrations.Add(new HandlerRegistration<TMessage, THandler>(Glob.Parse(subject)));
 
 		return this;
 	}
 
 	public InProcessMessageQueueConfiguration AddHandler(Type handlerType, string subject)
 	{
-		var registrationType = typeof(HandlerRegistration<>).MakeGenericType(handlerType);
+		var typeArguments = handlerType.GetInterfaces()
+			.Where(t => t.GetGenericTypeDefinition() == typeof(IMessageHandler<>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(handlerType)
+			.ToArray();
+
+		var registrationType = typeof(HandlerRegistration<,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
@@ -35,16 +44,24 @@ public class InProcessMessageQueueConfiguration
 		return this;
 	}
 
-	public InProcessMessageQueueConfiguration AddProcessor<TProcessor>(string subject) where TProcessor : class, IMessageProcessor
+	public InProcessMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject)
+		where TProcessor : class, IMessageProcessor<TMessage, TReply>
 	{
-		m_SubscribeRegistrations.Add(new ProcessorRegistration<TProcessor>(Glob.Parse(subject)));
+		m_SubscribeRegistrations.Add(new ProcessorRegistration<TMessage, TReply, TProcessor>(Glob.Parse(subject)));
 
 		return this;
 	}
 
 	public InProcessMessageQueueConfiguration AddProcessor(Type processorType, string subject)
 	{
-		var registrationType = typeof(ProcessorRegistration<>).MakeGenericType(processorType);
+		var typeArguments = processorType.GetInterfaces()
+			.Where(t => t.GetGenericTypeDefinition() == typeof(IMessageProcessor<,>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(processorType)
+			.ToArray();
+
+		var registrationType = typeof(ProcessorRegistration<,,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {processorType.FullName}");
 

@@ -7,19 +7,19 @@ namespace MessageQueue.MongoDB.IntegrationTests;
 
 public class BsonSerializeTests
 {
-	[Fact]
-	public void 序列化Memory型別資料()
-	{
-		var data = new MongoMessage
-		{
-			Subject = "test",
-			Data = new byte[] { 1, 2, 3 }
-		};
+    [Fact]
+    public void 序列化Memory型別資料()
+    {
+        var data = new MongoMessage<byte[]>
+        {
+            Subject = "test",
+            Data = new byte[] { 1, 2, 3 }
+        };
 
-		var result = data.ToBson();
+        var result = data.ToBson();
 
-		var actual = BsonSerializer.Deserialize<MongoMessage>(result);
+        var actual = BsonSerializer.Deserialize<MongoMessage<byte[]>>(result);
 
-		data.ToExpectedObject().ShouldMatch(actual);
-	}
+        data.ToExpectedObject().ShouldMatch(actual);
+    }
 }

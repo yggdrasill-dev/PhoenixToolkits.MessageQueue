@@ -32,7 +32,7 @@ public class RabbitMessageQueueConfiguration
 	}
 
 	public RabbitMessageQueueConfiguration AddHandler<THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
-		where THandler : IMessageHandler
+		where THandler : IMessageHandler<ReadOnlyMemory<byte>>
 	{
 		m_SubscribeRegistrations.Add(
 			new SubscribeRegistration<THandler>(queueName, autoAck, dispatchConcurrency));

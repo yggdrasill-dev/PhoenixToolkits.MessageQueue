@@ -1,10 +1,28 @@
-﻿using NATS.Client;
+﻿using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal record NatsSubscriptionSettings
+internal record NatsSubscriptionSettings<TMessage> : INatsSubscribe
 {
 	public string Subject { get; set; } = default!;
 
-	public EventHandler<MsgHandlerEventArgs> EventHandler { get; set; } = default!;
+	public Func<NatsMsg<TMessage>, CancellationToken, ValueTask> EventHandler { get; set; } = default!;
+
+	public ValueTask<IDisposable> SubscribeAsync(INatsConnectionManager connectionManager, CancellationToken cancellationToken = default)
+	{
+		var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+		_ = Task.Run(async () =>
+		{
+			await foreach (var msg in connectionManager.Connection.SubscribeAsync<TMessage>(
+				Subject,
+				cancellationToken: cancellationToken))
+			{
+				if (EventHandler is not null)
+					await EventHandler(msg, cts.Token).ConfigureAwait(false);
+			}
+		}, cts.Token);
+
+		return ValueTask.FromResult((IDisposable)cts);
+	}
 }

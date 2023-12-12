@@ -1,15 +1,13 @@
-﻿using NATS.Client.JetStream;
+﻿using NATS.Client.JetStream.Models;
 using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
 internal interface INatsMessageQueueService
 	: IMessageSender
-	, IMessageReceiver<NatsSubscriptionSettings>
-	, IMessageReceiver<NatsQueueScriptionSettings>
-	, IMessageReceiver<JetStreamPushSubscriptionSettings>
+	, IMessageReceiver<INatsSubscribe>
 {
-	void RegisterStream(Action<StreamConfiguration.StreamConfigurationBuilder> streamConfigure);
+	ValueTask RegisterStreamAsync(StreamConfig config, CancellationToken cancellationToken = default);
 
 	IEnumerable<IMessageExchange> BuildJetStreamExchanges(
 		IEnumerable<JetStreamExchangeRegistration> registrations,

@@ -1,6 +1,6 @@
 ﻿namespace Valhalla.MessageQueue.Nats;
 
-internal record NatsQuestion : Question
+internal record NatsQuestion<TQuestion> : Question<TQuestion>
 {
 	private readonly string? m_ReplySubject;
 	private readonly IMessageSender m_MessageSender;
@@ -8,7 +8,7 @@ internal record NatsQuestion : Question
 	public override bool CanResponse => !string.IsNullOrEmpty(m_ReplySubject);
 
 	public NatsQuestion(
-		ReadOnlyMemory<byte> data,
+		TQuestion data,
 		IMessageSender messageSender,
 		string? replySubject)
 	{
@@ -17,24 +17,31 @@ internal record NatsQuestion : Question
 		m_MessageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
 	}
 
-	public override ValueTask<Answer> AskAsync(
-		ReadOnlyMemory<byte> data,
+	public override ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> CanResponse
-			? m_MessageSender.AskAsync(
+			? m_MessageSender.AskAsync<TMessage, TReply>(
 				m_ReplySubject!,
 				data,
 				header.Concat(new[] { new MessageHeaderValue(MessageHeaderValueConsts.SessionAskKey, string.Empty) }),
 				cancellationToken)
 			: throw new NatsReplySubjectNullException();
 
-	public override ValueTask CompleteAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> CanResponse
 			? m_MessageSender.PublishAsync(m_ReplySubject!, data, header, cancellationToken)
 			: throw new NatsReplySubjectNullException();
+	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> CanResponse
+			? m_MessageSender.PublishAsync(m_ReplySubject!, Array.Empty<byte>(), header, cancellationToken)
+			: throw new NatsReplySubjectNullException();
 
-	public override ValueTask FailAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask FailAsync(
+		string data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken = default)
 		=> CanResponse
 			? m_MessageSender.PublishFailAsync(m_ReplySubject!, data, header, cancellationToken: cancellationToken)
 			: throw new NatsReplySubjectNullException();

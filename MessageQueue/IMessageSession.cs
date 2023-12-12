@@ -1,6 +1,6 @@
 ﻿namespace Valhalla.MessageQueue;
 
-public interface IMessageSession
+public interface IMessageSession<TMessage>
 {
-	ValueTask HandleAsync(Question question, CancellationToken cancellationToken = default);
+	ValueTask HandleAsync(Question<TMessage> question, CancellationToken cancellationToken = default);
 }

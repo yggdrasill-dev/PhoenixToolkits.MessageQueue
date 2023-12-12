@@ -3,8 +3,8 @@ using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal class InternalProcessorSession<TProcessor> : IMessageSession
-	where TProcessor : IMessageProcessor
+internal class InternalProcessorSession<TMessage, TReply, TProcessor> : IMessageSession<TMessage>
+	where TProcessor : IMessageProcessor<TMessage, TReply>
 {
 	private readonly TProcessor m_Processor;
 
@@ -13,7 +13,7 @@ internal class InternalProcessorSession<TProcessor> : IMessageSession
 		m_Processor = ActivatorUtilities.CreateInstance<TProcessor>(serviceProvider);
 	}
 
-	public async ValueTask HandleAsync(Question question, CancellationToken cancellationToken = default)
+	public async ValueTask HandleAsync(Question<TMessage> question, CancellationToken cancellationToken = default)
 	{
 		using var activity = NatsMessageQueueConfiguration._NatsActivitySource.StartActivity("InternalHandlerSession");
 

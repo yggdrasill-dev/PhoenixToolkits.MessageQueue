@@ -2,48 +2,55 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
-	where THandler : INatsMessageHandler
+internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegistration
+	where THandler : INatsMessageHandler<TMessage>
 {
-	private readonly ConsumerConfiguration.ConsumerConfigurationBuilder m_ConsumerConfigurationBuilder;
+	private readonly string m_Stream;
+	private readonly ConsumerConfig m_ConsumerConfig;
 
 	public string Subject { get; }
 
 	public JetStreamHandlerRegistration(
 		string subject,
-		ConsumerConfiguration.ConsumerConfigurationBuilder consumerConfigurationBuilder)
+		string stream,
+		ConsumerConfig consumerConfig)
 	{
+		if (string.IsNullOrEmpty(stream))
+			throw new ArgumentException($"'{nameof(stream)}' 不可為 Null 或空白。", nameof(stream));
+
 		Subject = subject;
-		m_ConsumerConfigurationBuilder = consumerConfigurationBuilder ?? throw new ArgumentNullException(nameof(consumerConfigurationBuilder));
+		m_Stream = stream;
+		m_ConsumerConfig = consumerConfig ?? throw new ArgumentNullException(nameof(consumerConfig));
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
-		object receiver,
+		IMessageReceiver<INatsSubscribe> receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> receiver is not IMessageReceiver<JetStreamPushSubscriptionSettings> messageReceiver
-			? null
-			: await messageReceiver.SubscribeAsync(new JetStreamPushSubscriptionSettings(
+		=> await receiver.SubscribeAsync(
+			new JetStreamSubscriptionSettings<TMessage>(
 				Subject,
-				m_ConsumerConfigurationBuilder.BuildPushSubscribeOptions(),
-				(sender, args) => _ = HandleMessageAsync(new MessageDataInfo
-				{
-					Args = args,
-					ServiceProvider = serviceProvider,
-					Logger = logger,
-					CancellationToken = cancellationToken
-				}).AsTask())).ConfigureAwait(false);
+				m_Stream,
+				m_ConsumerConfig,
+				(msg, ct) => HandleMessageAsync(
+					new MessageDataInfo<NatsJSMsg<TMessage>>(
+						msg,
+						logger,
+						serviceProvider),
+					ct)),
+			cancellationToken).ConfigureAwait(false);
 
-	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
+	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsJSMsg<TMessage>> dataInfo, CancellationToken cancellationToken)
 	{
-		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
-			dataInfo.Args.Message.Header,
-			(header, key) => header[key],
+			dataInfo.Msg.Headers,
+			(header, key) => (header?[key] ?? string.Empty)!,
 			out var context)
 			? NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
 				Subject,
@@ -71,7 +78,7 @@ internal class JetStreamHandlerRegistration<THandler> : ISubscribeRegistration
 			var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
 
 			await handler.HandleAsync(
-				dataInfo.Args,
+				dataInfo.Msg,
 				cts.Token).ConfigureAwait(false);
 		}
 		catch (Exception ex)

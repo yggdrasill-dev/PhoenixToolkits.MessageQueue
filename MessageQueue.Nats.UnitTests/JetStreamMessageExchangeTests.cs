@@ -56,6 +56,6 @@ public class JetStreamMessageExchangeTests
 
         // Assert
         _ = jetSender.Received(1)
-            .PublishAsync(Arg.Is("test2"), Arg.Any<ReadOnlyMemory<byte>>());
+            .PublishAsync(Arg.Is("test2"), Arg.Any<byte[]>());
     }
 }

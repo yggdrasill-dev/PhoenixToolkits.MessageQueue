@@ -5,24 +5,26 @@ namespace Valhalla.MessageQueue.RabbitMQ;
 internal class RabbitMessageQueueService : IMessageQueueService
 {
 	private readonly IModel m_Channel;
+	private readonly IRabbitMQSerializerRegistry m_SerializerRegistry;
 	private readonly string m_ExchangeName;
 
-	public RabbitMessageQueueService(string exchangeName, IModel channel)
+	public RabbitMessageQueueService(string exchangeName, IModel channel, IRabbitMQSerializerRegistry serializerRegistry)
 	{
 		m_Channel = channel ?? throw new ArgumentNullException(nameof(channel));
+		m_SerializerRegistry = serializerRegistry ?? throw new ArgumentNullException(nameof(serializerRegistry));
 		m_ExchangeName = exchangeName ?? throw new ArgumentNullException(nameof(exchangeName));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	public ValueTask PublishAsync(
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 	{
@@ -42,21 +44,23 @@ internal class RabbitMessageQueueService : IMessageQueueService
 		var properties = BuildBasicProperties(appendHeaders);
 
 		cancellationToken.ThrowIfCancellationRequested();
-		m_Channel.BasicPublish(m_ExchangeName, subject, properties, data);
+
+		var binaryData = m_SerializerRegistry.GetSerializer<TMessage>().Serialize(data);
+		m_Channel.BasicPublish(m_ExchangeName, subject, properties, binaryData);
 
 		return ValueTask.CompletedTask;
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	public ValueTask SendAsync(
+	public ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();

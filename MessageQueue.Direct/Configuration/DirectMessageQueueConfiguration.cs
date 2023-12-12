@@ -17,16 +17,24 @@ public class DirectMessageQueueConfiguration
 		Services = messageQueueConfiguration.Services;
 	}
 
-	public DirectMessageQueueConfiguration AddHandler<THandler>(string subject) where THandler : class, IMessageHandler
+	public DirectMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject)
+		where THandler : class, IMessageHandler<TMessage>
 	{
-		_SubscribeRegistrations.Add(new HandlerRegistration<THandler>(Glob.Parse(subject)));
+		_SubscribeRegistrations.Add(new HandlerRegistration<TMessage, THandler>(Glob.Parse(subject)));
 
 		return this;
 	}
 
 	public DirectMessageQueueConfiguration AddHandler(Type handlerType, string subject)
 	{
-		var registrationType = typeof(HandlerRegistration<>).MakeGenericType(handlerType);
+		var typeArguments = handlerType.GetInterfaces()
+			.Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IMessageHandler<>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(handlerType)
+			.ToArray();
+
+		var registrationType = typeof(HandlerRegistration<,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
@@ -35,16 +43,24 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddProcessor<TProcessor>(string subject) where TProcessor : class, IMessageProcessor
+	public DirectMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject) where TProcessor
+		: class, IMessageProcessor<TMessage, TReply>
 	{
-		_SubscribeRegistrations.Add(new ProcessorRegistration<TProcessor>(Glob.Parse(subject)));
+		_SubscribeRegistrations.Add(new ProcessorRegistration<TMessage, TReply, TProcessor>(Glob.Parse(subject)));
 
 		return this;
 	}
 
 	public DirectMessageQueueConfiguration AddProcessor(Type processorType, string subject)
 	{
-		var registrationType = typeof(ProcessorRegistration<>).MakeGenericType(processorType);
+		var typeArguments = processorType.GetInterfaces()
+			.Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IMessageProcessor<,>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(processorType)
+			.ToArray();
+
+		var registrationType = typeof(ProcessorRegistration<,,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {processorType.FullName}");
 
@@ -53,16 +69,25 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddSession<TSession>(string subject) where TSession : class, IMessageSession
+	public DirectMessageQueueConfiguration AddSession<TMessage, TSession>(string subject)
+		where TSession : class, IMessageSession<TMessage>
 	{
-		_SubscribeRegistrations.Add(new SessionRegistration<TSession>(Glob.Parse(subject)));
+		_SubscribeRegistrations.Add(new SessionRegistration<TMessage, TSession>(Glob.Parse(subject)));
 
 		return this;
 	}
 
 	public DirectMessageQueueConfiguration AddSession(Type sessionType, string subject)
 	{
-		var registrationType = typeof(SessionRegistration<>).MakeGenericType(sessionType);
+		var typeArguments = sessionType
+			.GetInterfaces()
+			.Where(t => t.GetGenericTypeDefinition() == typeof(IMessageSession<>))
+			.Take(1)
+			.SelectMany(t => t.GetGenericArguments())
+			.Append(sessionType)
+			.ToArray();
+
+		var registrationType = typeof(SessionRegistration<,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {sessionType.FullName}");
 

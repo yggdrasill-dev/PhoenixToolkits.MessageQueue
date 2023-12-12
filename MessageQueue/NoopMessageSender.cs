@@ -2,19 +2,19 @@
 
 internal class NoopMessageSender : IMessageSender
 {
-	public ValueTask<Answer> AskAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult<Answer>(new NoopAnswer(this));
-
-	public ValueTask PublishAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
-		=> ValueTask.CompletedTask;
-
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult<ReadOnlyMemory<byte>>(Array.Empty<byte>());
+		=> ValueTask.FromResult<Answer<TReply>>(new NoopAnswer<TReply>(this));
 
-	public ValueTask SendAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public ValueTask PublishAsync<TMessage>(string subject, TMessage data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> ValueTask.CompletedTask;
+
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(string subject, TMessage data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(default(TReply)!);
+
+	public ValueTask SendAsync<TMessage>(string subject, TMessage data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 }

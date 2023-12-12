@@ -2,9 +2,10 @@
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class ReplyRegistration<THandler> : ISubscribeRegistration where THandler : IMessageHandler
+internal class ReplyRegistration<TMessage, THandler> : ISubscribeRegistration
+	where THandler : IMessageHandler<TMessage>
 {
-	private readonly SessionRegistration<InternalHandlerSession<THandler>> m_SessionRegistration;
+	private readonly SessionRegistration<TMessage, InternalHandlerSession<TMessage, THandler>> m_SessionRegistration;
 
 	public string Subject { get; }
 
@@ -14,11 +15,11 @@ internal class ReplyRegistration<THandler> : ISubscribeRegistration where THandl
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
 		Subject = subject;
 
-		m_SessionRegistration = new SessionRegistration<InternalHandlerSession<THandler>>(subject);
+		m_SessionRegistration = new SessionRegistration<TMessage, InternalHandlerSession<TMessage, THandler>>(subject);
 	}
 
 	public ValueTask<IDisposable?> SubscribeAsync(
-		object receiver,
+		IMessageReceiver<INatsSubscribe> receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)

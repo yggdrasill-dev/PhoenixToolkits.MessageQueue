@@ -59,7 +59,7 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 		GC.SuppressFinalize(this);
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(RabbitSubscriptionSettings settings)
+	public ValueTask<IDisposable> SubscribeAsync(RabbitSubscriptionSettings settings, CancellationToken cancellationToken = default)
 	{
 		var factory = new ConnectionFactory()
 		{

@@ -7,14 +7,14 @@ using Valhalla.MessageQueue.MongoDB.Configuration;
 
 namespace Valhalla.MessageQueue.MongoDB;
 
-internal class MessageSubscriber<TReceiver> : IMessageSubscriber, IAsyncDisposable
-	where TReceiver : class, IMessageHandler
+internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsyncDisposable
+	where TReceiver : class, IMessageHandler<TMessage>
 {
-	private readonly ILogger<MessageSubscriber<TReceiver>> m_Logger;
+	private readonly ILogger<MessageSubscriber<TMessage, TReceiver>> m_Logger;
 	private readonly IServiceProvider m_ServiceProvider;
 	private bool m_DisposedValue;
 
-	public MessageSubscriber(IServiceProvider serviceProvider, ILogger<MessageSubscriber<TReceiver>> logger)
+	public MessageSubscriber(IServiceProvider serviceProvider, ILogger<MessageSubscriber<TMessage, TReceiver>> logger)
 	{
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -39,7 +39,7 @@ internal class MessageSubscriber<TReceiver> : IMessageSubscriber, IAsyncDisposab
 	public MessageResult Process(ProcessContext processContext)
 	{
 		using var activity = TraceContextPropagator.TryExtract(
-			processContext.Data<MongoMessage>(),
+			processContext.Data<MongoMessage<byte[]>>(),
 			(p, key) => key switch
 			{
 				TraceContextPropagator.TraceParent => p.TraceParent!,
@@ -65,19 +65,19 @@ internal class MessageSubscriber<TReceiver> : IMessageSubscriber, IAsyncDisposab
 					new KeyValuePair<string, object?>("handler", typeof(TReceiver).Name)
 				});
 
-		var payload = processContext.Data<MongoMessage>();
+		var payload = processContext.Data<MongoMessage<TMessage>>();
 
 		try
 		{
 			Task.Run(async () =>
 			{
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-				await using var scope = m_ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
+				var scope = m_ServiceProvider.CreateAsyncScope();
+				await using (scope.ConfigureAwait(false))
+				{
+					var receiver = scope.ServiceProvider.GetRequiredService<TReceiver>();
 
-				var receiver = scope.ServiceProvider.GetRequiredService<TReceiver>();
-
-				await receiver.HandleAsync(payload!.Data).ConfigureAwait(false);
+					await receiver.HandleAsync(payload!.Data!).ConfigureAwait(false);
+				}
 			}).GetAwaiter().GetResult();
 
 			return MessageResult.Successful;

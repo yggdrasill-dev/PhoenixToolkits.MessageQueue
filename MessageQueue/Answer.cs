@@ -1,10 +1,14 @@
 ﻿namespace Valhalla.MessageQueue;
 
-public abstract record Answer
+public abstract record Answer<TAnswer>
 {
 	public abstract bool CanResponse { get; }
-	public ReadOnlyMemory<byte> Result { get; protected set; }
-	public abstract ValueTask<Answer> AskAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
-	public abstract ValueTask CompleteAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
-	public abstract ValueTask FailAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
+	public TAnswer Result { get; protected set; } = default!;
+	public abstract ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken = default);
+	public abstract ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
+	public abstract ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
+	public abstract ValueTask FailAsync(string data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default);
 }

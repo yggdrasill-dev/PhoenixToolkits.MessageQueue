@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class SessionReplyRegistration : ISubscribeRegistration
+internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
 {
 	public string Subject { get; }
 
@@ -16,30 +17,29 @@ internal class SessionReplyRegistration : ISubscribeRegistration
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
-		object receiver,
+		IMessageReceiver<INatsSubscribe> receiver,
 		IServiceProvider serviceProvider,
 		ILogger logger,
 		CancellationToken cancellationToken)
-		=> receiver is not IMessageReceiver<NatsSubscriptionSettings> messageReceiver
-			? null
-			: await messageReceiver.SubscribeAsync(new NatsSubscriptionSettings
+		=> await receiver.SubscribeAsync(
+			new NatsSubscriptionSettings<TMessage>
 			{
 				Subject = Subject,
-				EventHandler = (sender, args) => HandleMessageAsync(new MessageDataInfo
-				{
-					Args = args,
-					ServiceProvider = serviceProvider,
-					Logger = logger,
-					CancellationToken = cancellationToken
-				}).AsTask()
-			}).ConfigureAwait(false);
+				EventHandler = (msg, ct) => HandleMessageAsync(
+					new MessageDataInfo<NatsMsg<TMessage>>(
+						msg,
+						logger,
+						serviceProvider),
+					ct)
+			},
+			cancellationToken).ConfigureAwait(false);
 
-	private async ValueTask HandleMessageAsync(MessageDataInfo dataInfo)
+	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<TMessage>> dataInfo, CancellationToken cancellationToken)
 	{
-		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
-			dataInfo.Args.Message.Header,
-			(header, key) => header[key],
+			dataInfo.Msg.Headers,
+			(header, key) => (header?[key] ?? string.Empty)!,
 			out var context)
 			? NatsMessageQueueConfiguration._NatsActivitySource.StartActivity(
 				Subject,
@@ -59,41 +59,41 @@ internal class SessionReplyRegistration : ISubscribeRegistration
 
 		try
 		{
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-			await using var scope = dataInfo.ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-			var store = scope.ServiceProvider.GetRequiredService<IReplyPromiseStore>();
-			var replySender = scope.ServiceProvider.GetRequiredService<IMessageSender>();
-			var replyId = dataInfo.Args.Message.HasHeaders
-				? dataInfo.Args.Message.Header.GetValues(MessageHeaderValueConsts.SessionReplyKey)?.FirstOrDefault()
-				: null;
-
-			dataInfo.Logger.LogInformation("ReplyId: {replyId}", replyId);
-
-			if (replyId is not null && Guid.TryParse(replyId, out var replyGuid))
+			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
+			await using (scope.ConfigureAwait(false))
 			{
-				var isFail = dataInfo.Args.Message.HasHeaders
-					&& dataInfo.Args.Message.Header.GetValues(NatsMessageHeaderValueConsts.FailMessageHeaderValue.Name)?.Length > 0;
-				var responseData = dataInfo.Args.Message.Data;
-				var replySubject = dataInfo.Args.Message.HasHeaders
-					? dataInfo.Args.Message.Header.GetValues(MessageHeaderValueConsts.SessionReplySubjectKey)?.FirstOrDefault()
-					: null;
-				var askId = dataInfo.Args.Message.HasHeaders
-					? dataInfo.Args.Message.Header.GetValues(MessageHeaderValueConsts.SessionAskKey)?.FirstOrDefault()
+				var store = scope.ServiceProvider.GetRequiredService<IReplyPromiseStore>();
+				var replySender = scope.ServiceProvider.GetRequiredService<IMessageSender>();
+				var replyId = dataInfo.Msg.Headers?.TryGetValue(MessageHeaderValueConsts.SessionReplyKey, out var replyKeys) == true
+					? replyKeys.FirstOrDefault()
 					: null;
 
-				dataInfo.Logger.LogInformation("AskId: {askId}", askId);
+				dataInfo.Logger.LogInformation("ReplyId: {replyId}", replyId);
 
-				if (isFail)
-					store.SetException(replyGuid, new MessageProcessFailException(dataInfo.Args.Message.Data));
-				else
-					store.SetResult(
-						replyGuid,
-						new NatsAnswer(
-							responseData,
-							replySender,
-							replySubject,
-							askId != null && Guid.TryParse(askId, out var askGuid) ? askGuid : null));
+				if (replyId is not null && Guid.TryParse(replyId, out var replyGuid))
+				{
+					var responseData = dataInfo.Msg.Data;
+					var replySubject = dataInfo.Msg.Headers?.TryGetValue(MessageHeaderValueConsts.SessionReplySubjectKey, out var replySubjects) == true
+						? replySubjects.FirstOrDefault()
+						: null;
+					var askId = dataInfo.Msg.Headers?.TryGetValue(MessageHeaderValueConsts.SessionAskKey, out var askIds) == true
+						? askIds.FirstOrDefault()
+						: null;
+
+					dataInfo.Logger.LogInformation("AskId: {askId}", askId);
+
+					if (dataInfo.Msg.Headers?.TryGetValue(MessageHeaderValueConsts.FailHeaderKey, out var failValues) == true
+						&& failValues.Count > 0)
+						store.SetException(replyGuid, new MessageProcessFailException(failValues.ToString()));
+					else
+						store.SetResult(
+							replyGuid,
+							new NatsAnswer<TMessage>(
+								responseData!,
+								replySender,
+								replySubject,
+								askId != null && Guid.TryParse(askId, out var askGuid) ? askGuid : null));
+				}
 			}
 		}
 		catch (Exception ex)

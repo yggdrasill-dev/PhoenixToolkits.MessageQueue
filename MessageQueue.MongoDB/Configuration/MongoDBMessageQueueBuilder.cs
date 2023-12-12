@@ -27,8 +27,8 @@ public class MongoDBMessageQueueBuilder
 		m_Factory = factory ?? throw new ArgumentNullException(nameof(factory));
 	}
 
-	public MongoDBMessageQueueBuilder AddHandler<THandler>(string queueName, TimeSpan pollTime, int workers = 1)
-		where THandler : class, IMessageHandler
+	public MongoDBMessageQueueBuilder AddHandler<TMessage, THandler>(string queueName, TimeSpan pollTime, int workers = 1)
+		where THandler : class, IMessageHandler<TMessage>
 		=> AddHandler(typeof(THandler), queueName, pollTime, workers);
 
 	public MongoDBMessageQueueBuilder AddHandler(Type handlerType, string queueName, TimeSpan pollTime, int workers = 1)
@@ -77,9 +77,16 @@ public class MongoDBMessageQueueBuilder
 							.Queue(registration.QueueName)
 							.Handler(() =>
 							{
-								var subscriberType = typeof(MessageSubscriber<>);
+								var subscriberType = typeof(MessageSubscriber<,>);
+								var typeArguments = registration.HandlerType
+									.GetInterfaces()
+									.Where(t => t.GetGenericTypeDefinition() == typeof(IMessageHandler<>))
+									.Take(1)
+									.SelectMany(t => t.GetGenericArguments())
+									.Append(registration.HandlerType)
+									.ToArray();
 
-								var handlerType = subscriberType.MakeGenericType(registration.HandlerType);
+								var handlerType = subscriberType.MakeGenericType(typeArguments);
 
 								return serviceProvider.GetRequiredService(handlerType) as IMessageSubscriber;
 							})

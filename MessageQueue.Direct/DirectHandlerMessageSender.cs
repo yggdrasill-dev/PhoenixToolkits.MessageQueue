@@ -3,30 +3,30 @@ using Microsoft.Extensions.Logging;
 
 namespace Valhalla.MessageQueue.Direct;
 
-internal class DirectHandlerMessageSender<TMessageHandler> : IMessageSender
-	where TMessageHandler : class, IMessageHandler
+internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSender
+	where TMessageHandler : class, IMessageHandler<TData>
 {
-	private readonly ILogger<DirectHandlerMessageSender<TMessageHandler>> m_Logger;
+	private readonly ILogger<DirectHandlerMessageSender<TData, TMessageHandler>> m_Logger;
 	private readonly IServiceProvider m_ServiceProvider;
 
 	public DirectHandlerMessageSender(
 		IServiceProvider serviceProvider,
-		ILogger<DirectHandlerMessageSender<TMessageHandler>> logger)
+		ILogger<DirectHandlerMessageSender<TData, TMessageHandler>> logger)
 	{
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
-	public ValueTask<Answer> AskAsync(
+	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public ValueTask PublishAsync(
+	public ValueTask PublishAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -58,16 +58,16 @@ internal class DirectHandlerMessageSender<TMessageHandler> : IMessageSender
 		return ValueTask.CompletedTask;
 	}
 
-	public ValueTask<ReadOnlyMemory<byte>> RequestAsync(
+	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	public async ValueTask SendAsync(
+	public async ValueTask SendAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 	{
@@ -79,9 +79,9 @@ internal class DirectHandlerMessageSender<TMessageHandler> : IMessageSender
 			cancellationToken).ConfigureAwait(false);
 	}
 
-	private async ValueTask HandleMessageAsync(
+	private async ValueTask HandleMessageAsync<TMessage>(
 		string subject,
-		ReadOnlyMemory<byte> data,
+		TMessage data,
 		CancellationToken cancellationToken)
 	{
 		using var activity = DirectDiagnostics.ActivitySource.StartActivity(subject);
@@ -89,11 +89,17 @@ internal class DirectHandlerMessageSender<TMessageHandler> : IMessageSender
 		_ = (activity?.AddTag("mq", "Direct")
 			.AddTag("handler", typeof(TMessageHandler).Name));
 
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		await using var scope = m_ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-		var handler = ActivatorUtilities.CreateInstance<TMessageHandler>(scope.ServiceProvider);
+		var scope = m_ServiceProvider.CreateAsyncScope();
+		await using (scope.ConfigureAwait(false))
+		{
+			var handler = ActivatorUtilities.CreateInstance<TMessageHandler>(scope.ServiceProvider);
 
-		await handler.HandleAsync(data, cancellationToken).ConfigureAwait(false);
+			if (data is TData messageData)
+				await handler.HandleAsync(
+					messageData,
+					cancellationToken).ConfigureAwait(false);
+			else
+				throw new InvalidCastException($"type {typeof(TMessage).Name} Can't cast type {typeof(TData).Name}");
+		}
 	}
 }

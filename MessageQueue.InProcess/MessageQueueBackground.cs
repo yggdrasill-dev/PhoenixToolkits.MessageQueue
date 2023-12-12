@@ -6,14 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Valhalla.MessageQueue.InProcess.Configuration;
+using Valhalla.Messages;
 
 namespace Valhalla.MessageQueue.InProcess;
 
 internal class MessageQueueBackground : BackgroundService
 {
-	private readonly IEventBus m_EventBus;
 	private readonly ILogger<MessageQueueBackground> m_Logger;
 	private readonly IServiceProvider m_ServiceProvider;
+	private readonly IEventBus m_EventBus;
 	private readonly IEnumerable<ISubscribeRegistration> m_SubscribeRegistrations;
 
 	public MessageQueueBackground(
@@ -29,7 +30,7 @@ internal class MessageQueueBackground : BackgroundService
 	}
 
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
-		=> m_EventBus.MessageObservable
+		=> m_EventBus.GetEventObserable<InProcessMessage>(EventBusNames.InProcessEventBusName)!
 			.Do(_ => m_Logger.LogDebug("msg inbound"))
 			.Select(msg => Observable.FromAsync(() => Task.Run(
 				async () =>
@@ -45,39 +46,39 @@ internal class MessageQueueBackground : BackgroundService
 							context)
 						: InProcessDiagnostics.ActivitySource.StartActivity(msg.Subject);
 
-#pragma warning disable CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-					await using var scope = m_ServiceProvider.CreateAsyncScope();
-#pragma warning restore CA2007 // 請考慮對等候的工作呼叫 ConfigureAwait
-
-					bool TryFindSubscription(string subject, out IMessageHandlerExecutor executor)
+					var scope = m_ServiceProvider.CreateAsyncScope();
+					await using (scope.ConfigureAwait(false))
 					{
-						foreach (var sub in m_SubscribeRegistrations)
-							if (sub.SubjectGlob.IsMatch(subject))
-							{
-								executor = sub.CreateExecutor(scope.ServiceProvider);
-								return true;
-							}
+						bool TryFindSubscription(string subject, out IMessageHandlerExecutor executor)
+						{
+							foreach (var sub in m_SubscribeRegistrations)
+								if (sub.SubjectGlob.IsMatch(subject))
+								{
+									executor = sub.CreateExecutor(scope.ServiceProvider);
+									return true;
+								}
 
-						executor = default!;
-						return false;
-					}
+							executor = default!;
+							return false;
+						}
 
-					m_Logger.LogDebug("Process msg");
+						m_Logger.LogDebug("Process msg");
 
-					if (TryFindSubscription(msg.Subject, out var handlerExecutor))
-					{
-						_ = (activity?.AddTag("mq", "InProcess")
-							.AddTag("handler", handlerExecutor.GetType().Name));
+						if (TryFindSubscription(msg.Subject, out var handlerExecutor))
+						{
+							_ = (activity?.AddTag("mq", "InProcess")
+								.AddTag("handler", handlerExecutor.GetType().Name));
 
-						await handlerExecutor.HandleAsync(
-							msg,
-							cts.Token).ConfigureAwait(false);
-					}
-					else
-					{
-						m_Logger.LogError("Subject ({subject}) can't found handler or processor.", msg.Subject);
+							await handlerExecutor.HandleAsync(
+								msg,
+								cts.Token).ConfigureAwait(false);
+						}
+						else
+						{
+							m_Logger.LogError("Subject ({subject}) can't found handler or processor.", msg.Subject);
 
-						msg.CompletionSource.SetException(new HandlerOrProcessorNotFoundException());
+							msg.CompletionSource.SetException(new HandlerOrProcessorNotFoundException());
+						}
 					}
 				},
 				stoppingToken))
@@ -93,5 +94,5 @@ internal class MessageQueueBackground : BackgroundService
 					return Unit.Default;
 				})))
 			.Merge()
-			.ToTask();
+			.ToTask(stoppingToken);
 }

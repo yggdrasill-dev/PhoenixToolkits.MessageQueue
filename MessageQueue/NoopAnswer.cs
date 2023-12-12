@@ -1,5 +1,5 @@
 ﻿namespace Valhalla.MessageQueue;
-internal record NoopAnswer : Answer
+internal record NoopAnswer<TAnswer> : Answer<TAnswer>
 {
 	private readonly IMessageSender m_MessageSender;
 
@@ -7,19 +7,26 @@ internal record NoopAnswer : Answer
 
 	public NoopAnswer(IMessageSender messageSender)
 	{
-		Result = Array.Empty<byte>();
+		Result = default!;
 		m_MessageSender = messageSender;
 	}
 
-	public override ValueTask<Answer> AskAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
-		=> m_MessageSender.AskAsync(
+	public override ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
+		TMessage data,
+		IEnumerable<MessageHeaderValue> header,
+		CancellationToken cancellationToken = default)
+		=> m_MessageSender.AskAsync<TMessage, TReply>(
 			"noop",
 			data,
+			header,
 			cancellationToken);
 
-	public override ValueTask CompleteAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 
-	public override ValueTask FailAsync(ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+	public override ValueTask FailAsync(string? data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> ValueTask.CompletedTask;
+
+	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 }

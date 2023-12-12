@@ -23,5 +23,5 @@ public static class ServiceCollectionExtensions
 		=> configuration.Services
 			.AddHostedService<MessageQueueBackground>()
 			.AddSingleton<QueueManagerService>()
-			.AddTransient(typeof(MessageSubscriber<>));
+			.AddTransient(typeof(MessageSubscriber<,>));
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using NATS.Client;
+using NATS.Client.Core;
 using NSubstitute;
 using Valhalla.MessageQueue;
 using Valhalla.MessageQueue.Nats;
@@ -13,86 +13,88 @@ public class AskModeTests
     [Fact]
     public async Task Ask應該回傳Answer()
     {
-        var fakeNatsConnection = Substitute.For<IConnection>();
+        var fakeNatsConnectionManager = Substitute.For<INatsConnectionManager>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
         var sut = new NatsMessageQueueService(
-            fakeNatsConnection,
+            fakeNatsConnectionManager,
             sessionReplySubject,
             fakePromiseStore,
             NullLogger<NatsMessageQueueService>.Instance);
 
         var askId = Guid.NewGuid();
+        var subject = "test";
+        var fakeNatsConnection = Substitute.For<INatsConnection>();
 
-        _ = fakeNatsConnection.RequestAsync(Arg.Any<Msg>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
+        _ = fakeNatsConnectionManager.Connection
+            .Returns(fakeNatsConnection);
+
+        _ = fakeNatsConnection.RequestAsync<string, string>(
+            Arg.Is(subject),
+            Arg.Any<string>(),
+            Arg.Any<NatsHeaders>())
+            .Returns(new NatsMsg<string>
             {
-                var msg = callInfo.Arg<Msg>();
-
-                var header = new MsgHeader
+                Subject = subject,
+                Data = "bbb",
+                Headers = new NatsHeaders
                 {
-                    {
-                        MessageHeaderValueConsts.SessionReplySubjectKey,
-                        msg.Header.GetValues(MessageHeaderValueConsts.SessionReplySubjectKey).First()
-                    },
-                    {
-                        MessageHeaderValueConsts.SessionAskKey,
-                        askId.ToString()
-                    }
-                };
-
-                return new Msg(msg.Subject, "reply", header, Array.Empty<byte>());
+                    [MessageHeaderValueConsts.SessionReplySubjectKey] = sessionReplySubject,
+                    [MessageHeaderValueConsts.SessionAskKey] = askId.ToString()
+                }
             });
 
-        var actual = await sut.AskAsync("test", Array.Empty<byte>());
+        var actual = await sut.AskAsync<string, string>(subject, "aaa");
 
         Assert.NotNull(actual);
-        Assert.IsType<NatsAnswer>(actual);
+        Assert.IsType<NatsAnswer<string>>(actual);
 
-        Assert.Equal(sessionReplySubject, (actual as NatsAnswer)?.ReplySubject);
-        Assert.Equal(askId, (actual as NatsAnswer)?.ReplyId);
+        var answer = actual as NatsAnswer<string>;
+        Assert.Equal(sessionReplySubject, answer?.ReplySubject);
+        Assert.Equal(askId, answer?.ReplyId);
     }
 
     [Fact]
-    public async Task InternalAsk應該回傳Answer()
+    public async Task 要呼叫InternalAsk前會先移除Header中的SessionAskKey()
     {
-        var fakeNatsConnection = Substitute.For<IConnection>();
+        var fakeNatsConnectionManager = Substitute.For<INatsConnectionManager>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
         var sut = new NatsMessageQueueService(
-            fakeNatsConnection,
+            fakeNatsConnectionManager,
             sessionReplySubject,
             fakePromiseStore,
             NullLogger<NatsMessageQueueService>.Instance);
 
         var askId = Guid.NewGuid();
 
-        var tcs = new TaskCompletionSource<Answer>();
-        tcs.SetResult(new NatsAnswer(Array.Empty<byte>(), sut, sessionReplySubject, askId));
+        var tcs = new TaskCompletionSource<Answer<string>>();
+        tcs.SetResult(new NatsAnswer<string>("aaa", sut, sessionReplySubject, askId));
 
-        _ = fakePromiseStore.CreatePromise(Arg.Any<CancellationToken>())
+        _ = fakePromiseStore.CreatePromise<string>(Arg.Any<CancellationToken>())
             .Returns((askId, tcs.Task));
 
-        var actual = await sut.AskAsync(
+        var actual = await sut.AskAsync<string, string>(
             "test",
-            Array.Empty<byte>(),
+            "aaa",
             new[] { new MessageHeaderValue(MessageHeaderValueConsts.SessionAskKey, string.Empty) },
             default);
 
         Assert.NotNull(actual);
-        Assert.IsType<NatsAnswer>(actual);
+        Assert.IsType<NatsAnswer<string>>(actual);
 
-        Assert.Equal(sessionReplySubject, (actual as NatsAnswer)?.ReplySubject);
-        Assert.Equal(askId, (actual as NatsAnswer)?.ReplyId);
+        var answer = actual as NatsAnswer<string>;
+        Assert.Equal(sessionReplySubject, answer?.ReplySubject);
+        Assert.Equal(askId, answer?.ReplyId);
     }
 
-    [Fact]
+    [Fact(Timeout = 1000)]
     public async Task 處理ReplyHandler()
     {
-        var registration = new SessionReplyRegistration("test");
-        var fakeMessageReceiver = Substitute.For<IMessageReceiver<NatsSubscriptionSettings>>();
+        var registration = new SessionReplyRegistration<ReadOnlyMemory<byte>>("test");
+        var fakeMessageReceiver = Substitute.For<IMessageReceiver<INatsSubscribe>>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var serviceCollection = new ServiceCollection();
@@ -102,15 +104,36 @@ public class AskModeTests
 
         var fakeServiceProvider = serviceCollection.BuildServiceProvider();
 
-        EventHandler<MsgHandlerEventArgs>? sut = null;
+        var replyId = Guid.NewGuid();
+        var askId = Guid.NewGuid();
 
-        fakeMessageReceiver
-            .When(fake => fake.SubscribeAsync(Arg.Any<NatsSubscriptionSettings>()))
+        var msg = new NatsMsg<ReadOnlyMemory<byte>>
+        {
+            Subject = "test",
+            Data = Array.Empty<byte>(),
+            Headers = new NatsHeaders
+            {
+                [MessageHeaderValueConsts.SessionReplyKey] = replyId.ToString(),
+                [MessageHeaderValueConsts.SessionReplySubjectKey] = "test"
+            }
+        };
+
+        var tcs = new TaskCompletionSource<Answer<ReadOnlyMemory<byte>>>();
+        fakePromiseStore
+            .When(fake => fake.SetResult(Arg.Is(replyId), Arg.Any<Answer<ReadOnlyMemory<byte>>>()))
             .Do(callInfo =>
             {
-                var setting = callInfo.Arg<NatsSubscriptionSettings>();
+                var answer = callInfo.Arg<Answer<ReadOnlyMemory<byte>>>();
 
-                sut = setting.EventHandler;
+                tcs.SetResult(answer);
+            });
+
+        fakeMessageReceiver.WhenForAnyArgs(fake => fake.SubscribeAsync(Arg.Any<INatsSubscribe>()))
+            .Do(callInfo =>
+            {
+                var settings = callInfo.Arg<INatsSubscribe>() as NatsSubscriptionSettings<ReadOnlyMemory<byte>>;
+
+                settings?.EventHandler(msg, default);
             });
 
         _ = await registration.SubscribeAsync(
@@ -119,26 +142,6 @@ public class AskModeTests
             NullLogger.Instance,
             default);
 
-        var replyId = Guid.NewGuid();
-        var askId = Guid.NewGuid();
-
-        var eventArg = new MsgHandlerEventArgs(new Msg("test", new MsgHeader {
-            { MessageHeaderValueConsts.SessionReplyKey, replyId.ToString() },
-            { MessageHeaderValueConsts.SessionReplySubjectKey, "test"}
-        }, Array.Empty<byte>()));
-
-        var tcs = new TaskCompletionSource<Answer>();
-        fakePromiseStore
-            .When(fake => fake.SetResult(Arg.Is(replyId), Arg.Any<Answer>()))
-            .Do(callInfo =>
-            {
-                var answer = callInfo.Arg<Answer>();
-
-                tcs.SetResult(answer);
-            });
-
-        sut?.Invoke(null, eventArg);
-
-        var actual = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        var actual = await tcs.Task;
     }
 }

@@ -28,7 +28,9 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
-    <PackageReference Include="NATS.Client" Version="1.1.1" />
+    <PackageReference Include="NATS.Client.Core" Version="2.0.2-preview.1" />
+    <PackageReference Include="NATS.Client.JetStream" Version="2.0.2-preview.1" />
+    <PackageReference Include="PhoenixToolkits.AwaitHelpers" Version="0.0.4" />
   </ItemGroup>
 
   <ItemGroup>

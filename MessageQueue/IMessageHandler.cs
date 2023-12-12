@@ -1,6 +1,6 @@
 ﻿namespace Valhalla.MessageQueue;
 
-public interface IMessageHandler
+public interface IMessageHandler<in TMessage>
 {
-	ValueTask HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default);
+	ValueTask HandleAsync(TMessage data, CancellationToken cancellationToken = default);
 }
