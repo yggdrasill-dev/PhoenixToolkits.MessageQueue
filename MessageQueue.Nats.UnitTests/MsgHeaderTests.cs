@@ -12,7 +12,7 @@ public class MsgHeaderTests
     {
         var sut = new NatsMsg<string>
         {
-            Headers = new NatsHeaders()
+            Headers = []
         };
 
         var headerValue = MessageHeaderValueConsts.FailHeaderKey;

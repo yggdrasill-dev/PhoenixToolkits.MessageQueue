@@ -13,7 +13,7 @@ public class BsonSerializeTests
         var data = new MongoMessage<byte[]>
         {
             Subject = "test",
-            Data = new byte[] { 1, 2, 3 }
+            Data = [1, 2, 3]
         };
 
         var result = data.ToBson();

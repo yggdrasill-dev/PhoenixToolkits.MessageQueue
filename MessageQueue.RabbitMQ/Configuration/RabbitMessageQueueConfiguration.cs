@@ -23,8 +23,7 @@ public class RabbitMessageQueueConfiguration
 
 	public RabbitMessageQueueConfiguration(MessageQueueConfiguration coreConfiguration)
 	{
-		if (coreConfiguration is null)
-			throw new ArgumentNullException(nameof(coreConfiguration));
+		ArgumentNullException.ThrowIfNull(coreConfiguration, nameof(coreConfiguration));
 
 		Services = coreConfiguration.Services;
 

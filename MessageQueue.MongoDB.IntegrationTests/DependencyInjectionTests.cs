@@ -104,7 +104,7 @@ public class DependencyInjectionTests
             new ProcessContext(
                 new MongoDBMessage
                 {
-                    Data = new BsonDocument()
+                    Data = []
                 },
                 container));
 

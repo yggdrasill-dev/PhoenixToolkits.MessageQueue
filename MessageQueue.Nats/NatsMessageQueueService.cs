@@ -209,8 +209,7 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 
 	private NatsHeaders MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
 	{
-		if (header is null)
-			throw new ArgumentNullException(nameof(header));
+		ArgumentNullException.ThrowIfNull(header, nameof(header));
 
 		var msgHeader = new NatsHeaders();
 		foreach (var headerValue in header)
