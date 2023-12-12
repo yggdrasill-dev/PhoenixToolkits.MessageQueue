@@ -31,11 +31,11 @@ public class RabbitMessageQueueConfiguration
 		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
 	}
 
-	public RabbitMessageQueueConfiguration AddHandler<TMessage, THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
-		where THandler : IMessageHandler<TMessage>
+	public RabbitMessageQueueConfiguration AddHandler<THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
 	{
-		m_SubscribeRegistrations.Add(
-			new SubscribeRegistration<TMessage, THandler>(queueName, autoAck, dispatchConcurrency));
+		var handlerType = typeof(THandler);
+
+		AddHandler(handlerType, queueName, autoAck, dispatchConcurrency);
 
 		return this;
 	}

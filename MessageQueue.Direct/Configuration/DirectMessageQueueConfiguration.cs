@@ -17,10 +17,11 @@ public class DirectMessageQueueConfiguration
 		Services = messageQueueConfiguration.Services;
 	}
 
-	public DirectMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject)
-		where THandler : class, IMessageHandler<TMessage>
+	public DirectMessageQueueConfiguration AddHandler<THandler>(string subject)
 	{
-		_SubscribeRegistrations.Add(new HandlerRegistration<TMessage, THandler>(Glob.Parse(subject)));
+		var handlerType = typeof(THandler);
+
+		AddHandler(handlerType, subject);
 
 		return this;
 	}
@@ -43,10 +44,11 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject) where TProcessor
-		: class, IMessageProcessor<TMessage, TReply>
+	public DirectMessageQueueConfiguration AddProcessor<TProcessor>(string subject)
 	{
-		_SubscribeRegistrations.Add(new ProcessorRegistration<TMessage, TReply, TProcessor>(Glob.Parse(subject)));
+		var processorType = typeof(TProcessor);
+
+		AddProcessor(processorType, subject);
 
 		return this;
 	}
@@ -69,10 +71,11 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddSession<TMessage, TSession>(string subject)
-		where TSession : class, IMessageSession<TMessage>
+	public DirectMessageQueueConfiguration AddSession<TSession>(string subject)
 	{
-		_SubscribeRegistrations.Add(new SessionRegistration<TMessage, TSession>(Glob.Parse(subject)));
+		var sessionType = typeof(TSession);
+
+		AddSession(sessionType, subject);
 
 		return this;
 	}

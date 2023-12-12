@@ -28,7 +28,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.RabbitMQ", "Me
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.InProcess.IntegrationTests", "MessageQueue.InProcess.IntegrationTests\MessageQueue.InProcess.IntegrationTests.csproj", "{2424B677-DD03-48EF-B110-906773CBE5AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.RabbitMQ.UnitTests", "MessageQueue.RabbitMQ.UnitTests\MessageQueue.RabbitMQ.UnitTests.csproj", "{6426CA55-DB65-45C7-B552-EE278C6559E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageQueue.RabbitMQ.UnitTests", "MessageQueue.RabbitMQ.UnitTests\MessageQueue.RabbitMQ.UnitTests.csproj", "{6426CA55-DB65-45C7-B552-EE278C6559E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.InProcess.UnitTests", "MessageQueue.InProcess.UnitTests\MessageQueue.InProcess.UnitTests.csproj", "{7D02B2B3-DA3D-4853-A53B-56417A449070}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageQueue.Direct.UnitTests", "MessageQueue.Direct.UnitTests\MessageQueue.Direct.UnitTests.csproj", "{AC54A614-918B-4C43-B57B-30F2EE27F5EF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -80,6 +84,14 @@ Global
 		{6426CA55-DB65-45C7-B552-EE278C6559E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6426CA55-DB65-45C7-B552-EE278C6559E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6426CA55-DB65-45C7-B552-EE278C6559E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D02B2B3-DA3D-4853-A53B-56417A449070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D02B2B3-DA3D-4853-A53B-56417A449070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D02B2B3-DA3D-4853-A53B-56417A449070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D02B2B3-DA3D-4853-A53B-56417A449070}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC54A614-918B-4C43-B57B-30F2EE27F5EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC54A614-918B-4C43-B57B-30F2EE27F5EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC54A614-918B-4C43-B57B-30F2EE27F5EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC54A614-918B-4C43-B57B-30F2EE27F5EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

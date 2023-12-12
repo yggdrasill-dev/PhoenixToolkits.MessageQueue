@@ -18,10 +18,11 @@ public class InProcessMessageQueueConfiguration
 		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
 	}
 
-	public InProcessMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject)
-		where THandler : class, IMessageHandler<TMessage>
+	public InProcessMessageQueueConfiguration AddHandler<THandler>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new HandlerRegistration<TMessage, THandler>(Glob.Parse(subject)));
+		var handlerType = typeof(THandler);
+
+		AddHandler(handlerType, subject);
 
 		return this;
 	}
@@ -44,10 +45,11 @@ public class InProcessMessageQueueConfiguration
 		return this;
 	}
 
-	public InProcessMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject)
-		where TProcessor : class, IMessageProcessor<TMessage, TReply>
+	public InProcessMessageQueueConfiguration AddProcessor<TProcessor>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new ProcessorRegistration<TMessage, TReply, TProcessor>(Glob.Parse(subject)));
+		var processorType = typeof(TProcessor);
+
+		AddProcessor(processorType, subject);
 
 		return this;
 	}

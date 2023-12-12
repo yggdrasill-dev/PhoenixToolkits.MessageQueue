@@ -43,10 +43,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject)
-		where THandler : IMessageHandler<TMessage>
+	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new SubscribeRegistration<TMessage, THandler>(subject));
+		var handlerType = typeof(THandler);
+
+		AddHandler(handlerType, subject);
 
 		return this;
 	}
@@ -70,10 +71,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler<TMessage, THandler>(string subject, string group)
-		where THandler : IMessageHandler<TMessage>
+	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject, string group)
 	{
-		m_SubscribeRegistrations.Add(new QueueRegistration<TMessage, THandler>(subject, group));
+		var handlerType = typeof(THandler);
+
+		AddHandler(handlerType, subject, group);
 
 		return this;
 	}
@@ -135,10 +137,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject)
-		where TProcessor : IMessageProcessor<TMessage, TReply>
+	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new ProcessRegistration<TMessage, TReply, TProcessor>(subject));
+		var processorType = typeof(TProcessor);
+
+		AddProcessor(processorType, subject);
 
 		return this;
 	}
@@ -162,10 +165,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor<TMessage, TReply, TProcessor>(string subject, string queue)
-		where TProcessor : IMessageProcessor<TMessage, TReply>
+	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(string subject, string queue)
 	{
-		m_SubscribeRegistrations.Add(new QueueProcessRegistration<TMessage, TReply, TProcessor>(subject, queue));
+		var processorType = typeof(TProcessor);
+
+		AddProcessor(processorType, subject, queue);
 
 		return this;
 	}
@@ -189,10 +193,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler<TMessage, THandler>(string subject)
-		where THandler : IMessageHandler<TMessage>
+	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new ReplyRegistration<TMessage, THandler>(subject));
+		var handlerType = typeof(THandler);
+
+		AddReplyHandler(handlerType, subject);
 
 		return this;
 	}
@@ -216,10 +221,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler<TMessage, THandler>(string subject, string group)
-		where THandler : IMessageHandler<TMessage>
+	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(string subject, string group)
 	{
-		m_SubscribeRegistrations.Add(new QueueReplyRegistration<TMessage, THandler>(subject, group));
+		var handlerType = typeof(THandler);
+
+		AddReplyHandler(handlerType, subject, group);
 
 		return this;
 	}
@@ -243,10 +249,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession<TMessage, TSession>(string subject)
-		where TSession : IMessageSession<TMessage>
+	public NatsMessageQueueConfiguration AddSession<TSession>(string subject)
 	{
-		m_SubscribeRegistrations.Add(new SessionRegistration<TMessage, TSession>(subject));
+		var sessionType = typeof(TSession);
+
+		AddSession(sessionType, subject);
 
 		return this;
 	}
@@ -262,7 +269,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(SessionRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, true)
 			?? throw new InvalidOperationException($"Unable to create a registration for session type {sessionType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -270,9 +277,11 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession<TMessage, TSession>(string subject, string group) where TSession : IMessageSession<TMessage>
+	public NatsMessageQueueConfiguration AddSession<TMessage, TSession>(string subject, string group)
 	{
-		m_SubscribeRegistrations.Add(new QueueSessionRegistration<TMessage, TSession>(subject, group));
+		var sessionType = typeof(TSession);
+
+		AddSession(sessionType, subject, group);
 
 		return this;
 	}
@@ -288,7 +297,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(QueueSessionRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group, true)
 			?? throw new InvalidOperationException($"Unable to create a registration for session type {sessionType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);

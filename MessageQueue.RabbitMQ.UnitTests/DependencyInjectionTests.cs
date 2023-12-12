@@ -33,7 +33,7 @@ public partial class DependencyInjectionTests
         // Act
         sut.AddMessageQueue()
             .AddRabbitMessageQueue(configure => configure
-                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("queueName"));
+                .AddHandler<StubMessageHandler>("queueName"));
     }
 
     [Fact]

@@ -15,7 +15,7 @@ public class MessageHandleTests
             .AddSingleton<PromiseStore>()
             .AddMessageQueue()
             .AddInProcessMessageQueue(configuration => configuration
-                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("test"))
+                .AddHandler<StubMessageHandler>("test"))
             .AddInProcessGlobPatternExchange("*");
 
         using var app = host.Build();
