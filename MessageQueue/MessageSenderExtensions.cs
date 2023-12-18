@@ -2,18 +2,6 @@
 
 public static class MessageSenderExtensions
 {
-	public static ValueTask<Answer<TReply>> AskAsync<TAnswer, TMessage, TReply>(
-		this Answer<TAnswer> answer,
-		TMessage data,
-		CancellationToken cancellationToken = default)
-		=> answer.AskAsync<TMessage, TReply>(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask<Answer<TReply>> AskAsync<TQuestion, TMessage, TReply>(
-		this Question<TQuestion> question,
-		TMessage data,
-		CancellationToken cancellationToken = default)
-		=> question.AskAsync<TMessage, TReply>(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
-
 	public static ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		this IMessageSender messageSender,
 		string subject,
@@ -24,40 +12,6 @@ public static class MessageSenderExtensions
 			data,
 			Array.Empty<MessageHeaderValue>(),
 			cancellationToken);
-
-	public static ValueTask CompleteAsync<TAnswer>(
-		this Answer<TAnswer> answer,
-		CancellationToken cancellationToken = default)
-		=> answer.CompleteAsync(Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask CompleteAsync<TQuestion>(
-		this Question<TQuestion> question,
-		CancellationToken cancellationToken = default)
-		=> question.CompleteAsync(Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask CompleteAsync<TAnswer, TReply>(
-		this Answer<TAnswer> answer,
-		TReply data,
-		CancellationToken cancellationToken = default)
-		=> answer.CompleteAsync(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask CompleteAsync<TQuestion, TReply>(
-		this Question<TQuestion> question,
-		TReply data,
-		CancellationToken cancellationToken = default)
-		=> question.CompleteAsync(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask FailAsync<TAnswer>(
-		this Answer<TAnswer> answer,
-		string data,
-		CancellationToken cancellationToken = default)
-		=> answer.FailAsync(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
-
-	public static ValueTask FailAsync<TQuestion>(
-		this Question<TQuestion> question,
-		string data,
-		CancellationToken cancellationToken = default)
-		=> question.FailAsync(data, Array.Empty<MessageHeaderValue>(), cancellationToken);
 
 	public static ValueTask PublishAsync<TMessage>(
 		this IMessageSender messageSender,

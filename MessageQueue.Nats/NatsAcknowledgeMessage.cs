@@ -8,6 +8,8 @@ public readonly struct NatsAcknowledgeMessage<TMessage> : IAcknowledgeMessage<TM
 
 	public TMessage? Data => m_Msg.Data;
 
+	public string Subject => m_Msg.Subject;
+
 	public NatsAcknowledgeMessage(NatsJSMsg<TMessage> msg)
 	{
 		m_Msg = msg;

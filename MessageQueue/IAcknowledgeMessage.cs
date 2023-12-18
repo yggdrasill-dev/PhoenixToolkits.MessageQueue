@@ -2,6 +2,8 @@
 
 public interface IAcknowledgeMessage<TMessage>
 {
+	string Subject { get; }
+
 	TMessage? Data { get; }
 
 	ValueTask AckAsync(CancellationToken cancellationToken = default);
