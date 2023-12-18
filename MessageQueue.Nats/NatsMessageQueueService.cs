@@ -130,9 +130,15 @@ internal class NatsMessageQueueService : INatsMessageQueueService
 	{
 		var js = m_NatsConnectionManager.CreateJsContext();
 
-		_ = await js.UpdateStreamAsync(
-			config,
-			cancellationToken).ConfigureAwait(false);
+		_ = await js.ListStreamsAsync(cancellationToken: cancellationToken)
+			.AnyAsync(stream => stream.Info.Config.Name == config.Name, cancellationToken)
+			.ConfigureAwait(false)
+			? await js.UpdateStreamAsync(
+				config,
+				cancellationToken).ConfigureAwait(false)
+			: await js.CreateStreamAsync(
+				config,
+				cancellationToken).ConfigureAwait(false);
 	}
 
 	public async ValueTask<TReply> RequestAsync<TMessage, TReply>(

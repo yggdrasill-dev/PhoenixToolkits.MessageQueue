@@ -7,7 +7,7 @@
     <RootNamespace>Valhalla.MessageQueue.Nats</RootNamespace>
     <SqlQueryToolsConnectionString />
     <PackageId>PhoenixToolkits.MessageQueue.Nats</PackageId>
-    <Version>1.9.3-alpha</Version>
+    <Version>1.9.4-alpha</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue.Nats</Product>
@@ -31,6 +31,7 @@
     <PackageReference Include="NATS.Client.Core" Version="2.0.2" />
     <PackageReference Include="NATS.Client.JetStream" Version="2.0.2" />
     <PackageReference Include="PhoenixToolkits.AwaitHelpers" Version="0.0.4" />
+    <PackageReference Include="System.Interactive.Async" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
