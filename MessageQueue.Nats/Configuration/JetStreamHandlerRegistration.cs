@@ -7,7 +7,7 @@ using NATS.Client.JetStream.Models;
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
 internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegistration
-	where THandler : INatsMessageHandler<TMessage>
+	where THandler : IAcknowledgeMessageHandler<TMessage>
 {
 	private readonly string m_Stream;
 	private readonly ConsumerConfig m_ConsumerConfig;
@@ -78,7 +78,7 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 			var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
 
 			await handler.HandleAsync(
-				dataInfo.Msg,
+				new NatsAcknowledgeMessage<TMessage>(dataInfo.Msg),
 				cts.Token).ConfigureAwait(false);
 		}
 		catch (Exception ex)

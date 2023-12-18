@@ -119,7 +119,7 @@ public class NatsMessageQueueConfiguration
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
-			.Where(t => t.GetGenericTypeDefinition() == typeof(INatsMessageHandler<>))
+			.Where(t => t.GetGenericTypeDefinition() == typeof(IAcknowledgeMessageHandler<>))
 			.Take(1)
 			.SelectMany(t => t.GetGenericArguments())
 			.Append(handlerType)
