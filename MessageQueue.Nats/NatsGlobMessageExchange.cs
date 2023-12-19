@@ -18,10 +18,14 @@ internal class NatsGlobMessageExchange : IMessageExchange
 	}
 
 	public IMessageSender GetMessageSender(string subject, IServiceProvider serviceProvider)
-		=> ActivatorUtilities.CreateInstance<NatsMessageSender>(
+	{
+		var connectionMgr = serviceProvider.GetRequiredService<INatsConnectionManager>();
+
+		return connectionMgr.CreateMessageSender(
 			serviceProvider,
-			m_NatsSerializerRegistry!,
-			m_SessionReplySubject!);
+			m_NatsSerializerRegistry,
+			m_SessionReplySubject);
+	}
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
 		=> m_Glob.IsMatch(subject);

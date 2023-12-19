@@ -15,7 +15,8 @@ public static class ServiceCollectionExtensions
 			_ = services.Remove(desc);
 
 		return services
-			.AddSingleton<INatsMessageQueueService, NoopMessageQueueService>();
+			.AddSingleton<NoopMessageQueueService>()
+			.AddSingleton<INatsConnectionManager, NoopConnectionManager>();
 	}
 
 	public static MessageQueueConfiguration AddNatsMessageQueue(

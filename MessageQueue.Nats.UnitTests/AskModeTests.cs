@@ -14,20 +14,16 @@ public class AskModeTests
     [Fact]
     public async Task Ask應該回傳Answer()
     {
-        var fakeNatsConnectionManager = Substitute.For<INatsConnectionManager>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
 
         var fakeNatsConnection = Substitute.For<INatsConnection>();
 
-        _ = fakeNatsConnectionManager.Connection
-            .Returns(fakeNatsConnection);
-
         var sut = new NatsMessageSender(
             null,
             sessionReplySubject,
-            fakeNatsConnectionManager,
+            fakeNatsConnection,
             fakePromiseStore,
             NullLogger<NatsMessageSender>.Instance);
 
@@ -63,14 +59,13 @@ public class AskModeTests
     [Fact]
     public async Task 要呼叫InternalAsk前會先移除Header中的SessionAskKey()
     {
-        var fakeNatsConnectionManager = Substitute.For<INatsConnectionManager>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
         var sut = new NatsMessageSender(
             null,
             sessionReplySubject,
-            fakeNatsConnectionManager,
+            Substitute.For<INatsConnection>(),
             fakePromiseStore,
             NullLogger<NatsMessageSender>.Instance);
 

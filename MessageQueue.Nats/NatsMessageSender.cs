@@ -15,17 +15,15 @@ internal class NatsMessageSender : IMessageSender
 	public NatsMessageSender(
 		INatsSerializerRegistry? natsSerializerRegistry,
 		string? sessionReplySubject,
-		INatsConnectionManager natsConnectionManager,
+		INatsConnection connection,
 		IReplyPromiseStore replyPromiseStore,
 		ILogger<NatsMessageSender> logger)
 	{
-		ArgumentNullException.ThrowIfNull(natsConnectionManager);
-
 		m_NatsSerializerRegistry = natsSerializerRegistry;
 		m_SessionReplySubject = sessionReplySubject;
 		m_ReplyPromiseStore = replyPromiseStore ?? throw new ArgumentNullException(nameof(replyPromiseStore));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-		m_Connection = natsConnectionManager.Connection;
+		m_Connection = connection ?? throw new ArgumentNullException(nameof(connection));
 	}
 
 	public async ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(

@@ -16,9 +16,13 @@ internal class JetStreamMessageExchange : IMessageExchange
 	}
 
 	public IMessageSender GetMessageSender(string subject, IServiceProvider serviceProvider)
-		=> ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
+	{
+		var connectionMgr = serviceProvider.GetRequiredService<INatsConnectionManager>();
+
+		return connectionMgr.CreateJetStreamMessageSender(
 			serviceProvider,
-			m_NatsSerializerRegistry!);
+			m_NatsSerializerRegistry);
+	}
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
 		=> m_Glob.IsMatch(subject);

@@ -7,19 +7,17 @@ namespace Valhalla.MessageQueue.Nats;
 
 internal class JetStreamMessageSender : IMessageSender
 {
-	private readonly INatsJSContext m_JetStream;
 	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
+	private readonly INatsJSContext m_NatsJSContext;
 	private readonly ILogger<JetStreamMessageSender> m_Logger;
 
 	public JetStreamMessageSender(
 		INatsSerializerRegistry? natsSerializerRegistry,
-		INatsConnectionManager natsConnectionManager,
+		INatsJSContext natsJSContext,
 		ILogger<JetStreamMessageSender> logger)
 	{
-		ArgumentNullException.ThrowIfNull(natsConnectionManager);
-
-		m_JetStream = natsConnectionManager.CreateJsContext();
 		m_NatsSerializerRegistry = natsSerializerRegistry;
+		m_NatsJSContext = natsJSContext ?? throw new ArgumentNullException(nameof(natsJSContext));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
@@ -50,12 +48,12 @@ internal class JetStreamMessageSender : IMessageSender
 			});
 
 		var ack = m_NatsSerializerRegistry is null
-			? await m_JetStream.PublishAsync(
+			? await m_NatsJSContext.PublishAsync(
 				subject,
 				data,
 				headers: MakeMsgHeader(appendHeaders),
 				cancellationToken: cancellationToken).ConfigureAwait(false)
-			: await m_JetStream.PublishAsync(
+			: await m_NatsJSContext.PublishAsync(
 				subject,
 				data,
 				headers: MakeMsgHeader(appendHeaders),
