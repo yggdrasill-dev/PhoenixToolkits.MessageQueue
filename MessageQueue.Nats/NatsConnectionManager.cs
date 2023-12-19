@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 
@@ -22,17 +23,18 @@ internal class NatsConnectionManager : INatsConnectionManager
 		IServiceProvider serviceProvider,
 		INatsSerializerRegistry? natsSerializerRegistry,
 		string? sessionReplySubject)
-		=> ActivatorUtilities.CreateInstance<NatsMessageSender>(
-			serviceProvider,
-			natsSerializerRegistry!,
-			sessionReplySubject!,
-			Connection);
+		=> new NatsMessageSender(
+			natsSerializerRegistry,
+			sessionReplySubject,
+			Connection,
+			serviceProvider.GetRequiredService<IReplyPromiseStore>(),
+			serviceProvider.GetRequiredService<ILogger<NatsMessageSender>>());
 
 	public IMessageSender CreateJetStreamMessageSender(
 		IServiceProvider serviceProvider,
 		INatsSerializerRegistry? natsSerializerRegistry)
-		=> ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
-			serviceProvider,
-			natsSerializerRegistry!,
-			CreateJsContext());
+		=> new JetStreamMessageSender(
+			natsSerializerRegistry,
+			CreateJsContext(),
+			serviceProvider.GetRequiredService<ILogger<JetStreamMessageSender>>());
 }
