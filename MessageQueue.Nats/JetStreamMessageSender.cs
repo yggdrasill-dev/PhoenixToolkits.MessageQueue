@@ -43,7 +43,7 @@ internal class JetStreamMessageSender : IMessageSender
 			appendHeaders,
 			(headers, key, value) =>
 			{
-				if (!string.IsNullOrEmpty(value))
+				if (!string.IsNullOrEmpty(value) && !headers.Any(header => header.Name == key))
 					headers.Add(new MessageHeaderValue(key, value));
 			});
 
