@@ -2,7 +2,7 @@
 
 internal record NatsAction<TQuestion> : Question<TQuestion>
 {
-	public override bool CanResponse => true;
+	public override bool CanResponse => false;
 
 	public NatsAction(TQuestion data)
 	{

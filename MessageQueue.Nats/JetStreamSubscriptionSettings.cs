@@ -1,4 +1,5 @@
-﻿using NATS.Client.JetStream;
+﻿using NATS.Client.Core;
+using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 
 namespace Valhalla.MessageQueue.Nats;
@@ -7,7 +8,8 @@ record JetStreamSubscriptionSettings<TMessage>(
 	string Subject,
 	string Stream,
 	ConsumerConfig ConsumerConfig,
-	Func<NatsJSMsg<TMessage>, CancellationToken, ValueTask> EventHandler)
+	Func<NatsJSMsg<TMessage>, CancellationToken, ValueTask> EventHandler,
+	INatsDeserialize<TMessage>? Deserializer)
 	: INatsSubscribe
 {
 	public async ValueTask<IDisposable> SubscribeAsync(INatsConnectionManager connectionManager, CancellationToken cancellationToken = default)
@@ -23,7 +25,7 @@ record JetStreamSubscriptionSettings<TMessage>(
 
 		_ = Task.Run(async () =>
 		{
-			await foreach (var msg in consumer.ConsumeAsync<TMessage>(cancellationToken: cts.Token))
+			await foreach (var msg in consumer.ConsumeAsync<TMessage>(serializer: Deserializer, cancellationToken: cts.Token))
 			{
 				if (EventHandler is not null)
 					await EventHandler(msg, cts.Token).ConfigureAwait(false);

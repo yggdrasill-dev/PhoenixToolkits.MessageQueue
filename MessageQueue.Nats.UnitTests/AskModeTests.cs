@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Buffers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NATS.Client.Core;
 using NSubstitute;
@@ -17,23 +18,27 @@ public class AskModeTests
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
-        var sut = new NatsMessageQueueService(
-            fakeNatsConnectionManager,
-            sessionReplySubject,
-            fakePromiseStore,
-            NullLogger<NatsMessageQueueService>.Instance);
 
-        var askId = Guid.NewGuid();
-        var subject = "test";
         var fakeNatsConnection = Substitute.For<INatsConnection>();
 
         _ = fakeNatsConnectionManager.Connection
             .Returns(fakeNatsConnection);
 
+        var sut = new NatsMessageSender(
+            null,
+            sessionReplySubject,
+            fakeNatsConnectionManager,
+            fakePromiseStore,
+            NullLogger<NatsMessageSender>.Instance);
+
+        var askId = Guid.NewGuid();
+        var subject = "test";
+
         _ = fakeNatsConnection.RequestAsync<string, string>(
             Arg.Is(subject),
             Arg.Any<string>(),
-            Arg.Any<NatsHeaders>())
+            Arg.Any<NatsHeaders>(),
+            cancellationToken: Arg.Any<CancellationToken>())
             .Returns(new NatsMsg<string>
             {
                 Subject = subject,
@@ -62,11 +67,12 @@ public class AskModeTests
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
         var sessionReplySubject = "test.reply";
-        var sut = new NatsMessageQueueService(
-            fakeNatsConnectionManager,
+        var sut = new NatsMessageSender(
+            null,
             sessionReplySubject,
+            fakeNatsConnectionManager,
             fakePromiseStore,
-            NullLogger<NatsMessageQueueService>.Instance);
+            NullLogger<NatsMessageSender>.Instance);
 
         var askId = Guid.NewGuid();
 
@@ -93,7 +99,7 @@ public class AskModeTests
     [Fact(Timeout = 1000)]
     public async Task 處理ReplyHandler()
     {
-        var registration = new SessionReplyRegistration<ReadOnlyMemory<byte>>("test");
+        var registration = new SessionReplyRegistration("test", null);
         var fakeMessageReceiver = Substitute.For<IMessageReceiver<INatsSubscribe>>();
         var fakePromiseStore = Substitute.For<IReplyPromiseStore>();
 
@@ -107,10 +113,10 @@ public class AskModeTests
         var replyId = Guid.NewGuid();
         var askId = Guid.NewGuid();
 
-        var msg = new NatsMsg<ReadOnlyMemory<byte>>
+        var msg = new NatsMsg<ReadOnlySequence<byte>>
         {
             Subject = "test",
-            Data = Array.Empty<byte>(),
+            Data = new ReadOnlySequence<byte>([]),
             Headers = new NatsHeaders
             {
                 [MessageHeaderValueConsts.SessionReplyKey] = replyId.ToString(),
@@ -118,20 +124,22 @@ public class AskModeTests
             }
         };
 
-        var tcs = new TaskCompletionSource<Answer<ReadOnlyMemory<byte>>>();
+        var tcs = new TaskCompletionSource<Answer<ReadOnlySequence<byte>>>();
         fakePromiseStore
-            .When(fake => fake.SetResult(Arg.Is(replyId), Arg.Any<Answer<ReadOnlyMemory<byte>>>()))
+            .When(fake => fake.SetResult(Arg.Is(replyId), Arg.Any<Answer<ReadOnlySequence<byte>>>()))
             .Do(callInfo =>
             {
-                var answer = callInfo.Arg<Answer<ReadOnlyMemory<byte>>>();
+                var answer = callInfo.Arg<Answer<ReadOnlySequence<byte>>>();
 
                 tcs.SetResult(answer);
             });
+        _ = fakePromiseStore.GetPromiseType(Arg.Is(replyId))
+            .Returns(typeof(ReadOnlySequence<byte>));
 
         fakeMessageReceiver.WhenForAnyArgs(fake => fake.SubscribeAsync(Arg.Any<INatsSubscribe>()))
             .Do(callInfo =>
             {
-                var settings = callInfo.Arg<INatsSubscribe>() as NatsSubscriptionSettings<ReadOnlyMemory<byte>>;
+                var settings = callInfo.Arg<INatsSubscribe>() as NatsSubscriptionSettings<ReadOnlySequence<byte>>;
 
                 settings?.EventHandler(msg, default);
             });

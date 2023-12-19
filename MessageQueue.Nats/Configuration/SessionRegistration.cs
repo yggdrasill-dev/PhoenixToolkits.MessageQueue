@@ -9,15 +9,17 @@ internal class SessionRegistration<TMessage, TMessageSession> : ISubscribeRegist
 	where TMessageSession : IMessageSession<TMessage>
 {
 	private readonly bool m_IsSession;
+	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
 
 	public string Subject { get; }
 
-	public SessionRegistration(string subject, bool isSession = true)
+	public SessionRegistration(string subject, bool isSession = true, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		if (string.IsNullOrEmpty(subject))
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
 		Subject = subject;
 		m_IsSession = isSession;
+		m_NatsSerializerRegistry = natsSerializerRegistry;
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -26,16 +28,15 @@ internal class SessionRegistration<TMessage, TMessageSession> : ISubscribeRegist
 		ILogger logger,
 		CancellationToken cancellationToken)
 		=> await receiver.SubscribeAsync(
-			new NatsSubscriptionSettings<TMessage>
-			{
-				Subject = Subject,
-				EventHandler = (msg, ct) => HandleMessageAsync(
+			new NatsSubscriptionSettings<TMessage>(
+				Subject,
+				(msg, ct) => HandleMessageAsync(
 					new MessageDataInfo<NatsMsg<TMessage>>(
 						msg,
 						logger,
 						serviceProvider),
-					ct)
-			},
+					ct),
+				m_NatsSerializerRegistry?.GetDeserializer<TMessage>()),
 			cancellationToken).ConfigureAwait(false);
 
 	private static async Task ProcessMessageAsync(
@@ -60,11 +61,11 @@ internal class SessionRegistration<TMessage, TMessageSession> : ISubscribeRegist
 		}
 	}
 
-	private Question<TMessage> CreateQuestion(MessageDataInfo<NatsMsg<TMessage>> dataInfo, INatsMessageQueueService natsSender)
+	private Question<TMessage> CreateQuestion(MessageDataInfo<NatsMsg<TMessage>> dataInfo, IMessageSender messageSender)
 		=> m_IsSession
 			? new NatsQuestion<TMessage>(
 				dataInfo.Msg.Data!,
-				natsSender,
+				messageSender,
 				dataInfo.Msg.ReplyTo)
 			: new NatsAction<TMessage>(
 				dataInfo.Msg.Data!);
@@ -100,8 +101,8 @@ internal class SessionRegistration<TMessage, TMessageSession> : ISubscribeRegist
 			await using (scope.ConfigureAwait(false))
 			{
 				var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
-				var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
-				var question = CreateQuestion(dataInfo, natsSender);
+				var messageSender = scope.ServiceProvider.GetRequiredService<IMessageSender>();
+				var question = CreateQuestion(dataInfo, messageSender);
 
 				await ProcessMessageAsync(
 					question,

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 
@@ -11,13 +12,15 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 {
 	private readonly string m_Stream;
 	private readonly ConsumerConfig m_ConsumerConfig;
+	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
 
 	public string Subject { get; }
 
 	public JetStreamHandlerRegistration(
 		string subject,
 		string stream,
-		ConsumerConfig consumerConfig)
+		ConsumerConfig consumerConfig,
+		INatsSerializerRegistry? natsSerializerRegistry)
 	{
 		if (string.IsNullOrEmpty(stream))
 			throw new ArgumentException($"'{nameof(stream)}' 不可為 Null 或空白。", nameof(stream));
@@ -25,6 +28,7 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 		Subject = subject;
 		m_Stream = stream;
 		m_ConsumerConfig = consumerConfig ?? throw new ArgumentNullException(nameof(consumerConfig));
+		m_NatsSerializerRegistry = natsSerializerRegistry;
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -42,7 +46,8 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 						msg,
 						logger,
 						serviceProvider),
-					ct)),
+					ct),
+				m_NatsSerializerRegistry?.GetDeserializer<TMessage>()),
 			cancellationToken).ConfigureAwait(false);
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsJSMsg<TMessage>> dataInfo, CancellationToken cancellationToken)

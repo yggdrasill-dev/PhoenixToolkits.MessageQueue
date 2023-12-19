@@ -9,4 +9,6 @@ public interface IReplyPromiseStore
 	void SetException(Guid id, Exception ex);
 
 	void SetResult<TReply>(Guid id, Answer<TReply> answer);
+
+	Type? GetPromiseType(Guid id);
 }

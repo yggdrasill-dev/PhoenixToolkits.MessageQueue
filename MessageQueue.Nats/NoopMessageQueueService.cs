@@ -1,9 +1,8 @@
 ﻿using NATS.Client.JetStream.Models;
-using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal class NoopMessageQueueService : INatsMessageQueueService
+internal class NoopMessageQueueService : INatsMessageQueueService, IMessageSender
 {
 	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
@@ -11,11 +10,6 @@ internal class NoopMessageQueueService : INatsMessageQueueService
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken)
 		=> throw new NotImplementedException();
-
-	public IEnumerable<IMessageExchange> BuildJetStreamExchanges(
-		IEnumerable<JetStreamExchangeRegistration> registrations,
-		IServiceProvider serviceProvider)
-		=> Array.Empty<IMessageExchange>();
 
 	public ValueTask PublishAsync<TMessage>(
 		string subject,

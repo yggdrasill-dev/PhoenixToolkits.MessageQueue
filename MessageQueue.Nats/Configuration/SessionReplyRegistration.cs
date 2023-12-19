@@ -1,19 +1,25 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
-internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
+internal class SessionReplyRegistration : ISubscribeRegistration
 {
+	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
+
 	public string Subject { get; }
 
-	public SessionReplyRegistration(string subject)
+	public SessionReplyRegistration(string subject, INatsSerializerRegistry? natsSerializerRegistry)
 	{
 		if (string.IsNullOrWhiteSpace(subject))
-			throw new ArgumentException($"'{nameof(subject)}' 不得為 Null 或空白字元。", nameof(subject));
+			throw new ArgumentException($"'{nameof(subject)}' is not null or empty.", nameof(subject));
+
 		Subject = subject;
+		m_NatsSerializerRegistry = natsSerializerRegistry;
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -22,19 +28,18 @@ internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
 		ILogger logger,
 		CancellationToken cancellationToken)
 		=> await receiver.SubscribeAsync(
-			new NatsSubscriptionSettings<TMessage>
-			{
-				Subject = Subject,
-				EventHandler = (msg, ct) => HandleMessageAsync(
-					new MessageDataInfo<NatsMsg<TMessage>>(
+			new NatsSubscriptionSettings<ReadOnlySequence<byte>>(
+				Subject,
+				(msg, ct) => HandleMessageAsync(
+					new MessageDataInfo<NatsMsg<ReadOnlySequence<byte>>>(
 						msg,
 						logger,
 						serviceProvider),
-					ct)
-			},
+					ct),
+				m_NatsSerializerRegistry?.GetDeserializer<ReadOnlySequence<byte>>()),
 			cancellationToken).ConfigureAwait(false);
 
-	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<TMessage>> dataInfo, CancellationToken cancellationToken)
+	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<ReadOnlySequence<byte>>> dataInfo, CancellationToken cancellationToken)
 	{
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
@@ -68,7 +73,7 @@ internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
 					? replyKeys.FirstOrDefault()
 					: null;
 
-				dataInfo.Logger.LogInformation("ReplyId: {replyId}", replyId);
+				dataInfo.Logger.LogDebug("ReplyId: {replyId}", replyId);
 
 				if (replyId is not null && Guid.TryParse(replyId, out var replyGuid))
 				{
@@ -80,19 +85,35 @@ internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
 						? askIds.FirstOrDefault()
 						: null;
 
-					dataInfo.Logger.LogInformation("AskId: {askId}", askId);
+					dataInfo.Logger.LogDebug("AskId: {askId}", askId);
 
 					if (dataInfo.Msg.Headers?.TryGetValue(MessageHeaderValueConsts.FailHeaderKey, out var failValues) == true
 						&& failValues.Count > 0)
 						store.SetException(replyGuid, new MessageProcessFailException(failValues.ToString()));
 					else
-						store.SetResult(
-							replyGuid,
-							new NatsAnswer<TMessage>(
-								responseData!,
+					{
+						var replyType = store.GetPromiseType(replyGuid);
+						if (replyType is null)
+						{
+							store.SetException(replyGuid, new MessageProcessFailException("Can't get promise reply type."));
+							return;
+						}
+
+						var deserializeMethodInfo = typeof(SessionReplyRegistration).GetMethod(
+							nameof(Deserialize),
+							BindingFlags.Instance | BindingFlags.NonPublic)!.MakeGenericMethod(replyType);
+
+						_ = deserializeMethodInfo.Invoke(
+							this,
+							new object?[]{
+								replyGuid,
+								responseData,
+								store,
 								replySender,
 								replySubject,
-								askId != null && Guid.TryParse(askId, out var askGuid) ? askGuid : null));
+								askId != null && Guid.TryParse(askId, out var askGuid) ? askGuid : null
+							});
+					}
 				}
 			}
 		}
@@ -106,5 +127,26 @@ internal class SessionReplyRegistration<TMessage> : ISubscribeRegistration
 					ex,
 					cts.Token).ConfigureAwait(false);
 		}
+	}
+
+	private void Deserialize<TReply>(
+		Guid replyGuid,
+		ReadOnlySequence<byte> data,
+		IReplyPromiseStore store,
+		IMessageSender replySender,
+		string? replySubject,
+		Guid? askGuid)
+	{
+		var deserializer = (m_NatsSerializerRegistry ?? NatsDefaultSerializerRegistry.Default).GetDeserializer<TReply>();
+
+		var response = deserializer.Deserialize(data);
+
+		store.SetResult(
+			replyGuid,
+			new NatsAnswer<TReply>(
+				response!,
+				replySender,
+				replySubject,
+				askGuid));
 	}
 }

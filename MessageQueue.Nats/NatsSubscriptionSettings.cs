@@ -2,12 +2,11 @@
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal record NatsSubscriptionSettings<TMessage> : INatsSubscribe
+internal record NatsSubscriptionSettings<TMessage>(
+	string Subject,
+	Func<NatsMsg<TMessage>, CancellationToken, ValueTask> EventHandler,
+	INatsDeserialize<TMessage>? Deserializer) : INatsSubscribe
 {
-	public string Subject { get; set; } = default!;
-
-	public Func<NatsMsg<TMessage>, CancellationToken, ValueTask> EventHandler { get; set; } = default!;
-
 	public ValueTask<IDisposable> SubscribeAsync(INatsConnectionManager connectionManager, CancellationToken cancellationToken = default)
 	{
 		var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -16,6 +15,7 @@ internal record NatsSubscriptionSettings<TMessage> : INatsSubscribe
 		{
 			await foreach (var msg in connectionManager.Connection.SubscribeAsync<TMessage>(
 				Subject,
+				serializer: Deserializer,
 				cancellationToken: cancellationToken))
 			{
 				if (EventHandler is not null)

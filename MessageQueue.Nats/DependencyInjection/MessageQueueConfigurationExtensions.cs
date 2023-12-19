@@ -1,7 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+﻿using NATS.Client.Core;
 using Valhalla.MessageQueue.Configuration;
 using Valhalla.MessageQueue.Nats;
-using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -9,18 +8,19 @@ public static class MessageQueueConfigurationExtensions
 {
 	public static MessageQueueConfiguration AddNatsGlobPatternExchange(
 		this MessageQueueConfiguration configuration,
-		string glob)
-		=> configuration.AddGlobPatternExchange<INatsMessageQueueService>(glob);
+		string glob,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
+		=> configuration.AddExchange(new NatsGlobMessageExchange(
+			glob,
+			configuration.SessionReplySubject,
+			natsSerializerRegistry));
 
 	public static MessageQueueConfiguration AddNatsJetStreamGlobPatternExchange(
 		this MessageQueueConfiguration configuration,
-		string glob)
-	{
-		configuration.Services
-			.AddSingleton(new JetStreamExchangeRegistration(glob))
-			.TryAddSingleton<JetStreamMessageExchange>();
-
-		return configuration
-			.AddGlobPatternExchange<JetStreamMessageExchange>(glob);
-	}
+		string glob,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
+		=> configuration
+			.AddExchange(new JetStreamMessageExchange(
+				glob,
+				natsSerializerRegistry));
 }

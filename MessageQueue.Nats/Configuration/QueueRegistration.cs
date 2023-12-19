@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
 
@@ -11,7 +12,7 @@ internal class QueueRegistration<TMessage, THandler> : ISubscribeRegistration
 
 	public string Subject { get; }
 
-	public QueueRegistration(string subject, string queue)
+	public QueueRegistration(string subject, string queue, INatsSerializerRegistry? natsSerializerRegistry)
 	{
 		if (string.IsNullOrEmpty(subject))
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
@@ -23,7 +24,8 @@ internal class QueueRegistration<TMessage, THandler> : ISubscribeRegistration
 		m_QueueSessionRegistration = new QueueSessionRegistration<TMessage, InternalHandlerSession<TMessage, THandler>>(
 			Subject,
 			Queue,
-			false);
+			false,
+			natsSerializerRegistry);
 	}
 
 	public ValueTask<IDisposable?> SubscribeAsync(

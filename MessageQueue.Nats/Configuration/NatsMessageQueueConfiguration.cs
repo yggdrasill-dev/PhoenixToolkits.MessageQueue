@@ -17,8 +17,6 @@ public class NatsMessageQueueConfiguration
 
 	public IServiceCollection Services { get; }
 
-	internal string? SessionReplySubject => m_CoreConfiguration.SessionReplySubject;
-
 	public NatsMessageQueueConfiguration(MessageQueueConfiguration coreConfiguration)
 	{
 		Services = coreConfiguration.Services;
@@ -33,26 +31,29 @@ public class NatsMessageQueueConfiguration
 	public NatsMessageQueueConfiguration ConfigureResolveConnection(Func<IServiceProvider, NatsConnection> configure)
 	{
 		Services
+			.AddSingleton<INatsConnectionManager>(sp => new NatsConnectionManager(configure(sp)))
 			.AddSingleton<INatsMessageQueueService>(sp => new NatsMessageQueueService(
-				new NatsConnectionManager(configure(sp)),
-				SessionReplySubject,
-				sp.GetRequiredService<IReplyPromiseStore>(),
-				sp.GetRequiredService<ILogger<NatsMessageQueueService>>()))
+				sp.GetRequiredService<INatsConnectionManager>()))
 			.AddHostedService<MessageQueueBackground>();
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject)
+	public NatsMessageQueueConfiguration AddHandler<THandler>(
+		string subject,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddHandler(handlerType, subject);
+		AddHandler(handlerType, subject, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler(Type handlerType, string subject)
+	public NatsMessageQueueConfiguration AddHandler(
+		Type handlerType,
+		string subject,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -63,7 +64,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(SubscribeRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -71,16 +72,23 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler<THandler>(string subject, string group)
+	public NatsMessageQueueConfiguration AddHandler<THandler>(
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddHandler(handlerType, subject, group);
+		AddHandler(handlerType, subject, group, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddHandler(Type handlerType, string subject, string group)
+	public NatsMessageQueueConfiguration AddHandler(
+		Type handlerType,
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -91,7 +99,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(QueueRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -102,11 +110,12 @@ public class NatsMessageQueueConfiguration
 	public NatsMessageQueueConfiguration AddJetStreamHandler<THandler>(
 		string subject,
 		string stream,
-		ConsumerConfig consumerConfig)
+		ConsumerConfig consumerConfig,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddJetStreamHandler(handlerType, subject, stream, consumerConfig);
+		AddJetStreamHandler(handlerType, subject, stream, consumerConfig, natsSerializerRegistry);
 
 		return this;
 	}
@@ -115,7 +124,8 @@ public class NatsMessageQueueConfiguration
 		Type handlerType,
 		string subject,
 		string stream,
-		ConsumerConfig consumerConfig)
+		ConsumerConfig consumerConfig,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -127,7 +137,11 @@ public class NatsMessageQueueConfiguration
 
 		var registrationType = typeof(JetStreamHandlerRegistration<,>).MakeGenericType(typeArguments);
 
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, stream, consumerConfig)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType,
+			subject,
+			stream,
+			consumerConfig,
+			natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -135,16 +149,16 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(string subject)
+	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var processorType = typeof(TProcessor);
 
-		AddProcessor(processorType, subject);
+		AddProcessor(processorType, subject, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor(Type processorType, string subject)
+	public NatsMessageQueueConfiguration AddProcessor(Type processorType, string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = processorType
 			.GetInterfaces()
@@ -155,7 +169,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(ProcessRegistration<,,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {processorType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -163,16 +177,27 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(string subject, string queue)
+	public NatsMessageQueueConfiguration AddProcessor<TProcessor>(
+		string subject,
+		string queue,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var processorType = typeof(TProcessor);
 
-		AddProcessor(processorType, subject, queue);
+		AddProcessor(
+			processorType,
+			subject,
+			queue,
+			natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddProcessor(Type processorType, string subject, string queue)
+	public NatsMessageQueueConfiguration AddProcessor(
+		Type processorType,
+		string subject,
+		string queue,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = processorType
 			.GetInterfaces()
@@ -183,7 +208,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(QueueProcessRegistration<,,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, queue)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, queue, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {processorType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -191,16 +216,19 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(string subject)
+	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddReplyHandler(handlerType, subject);
+		AddReplyHandler(handlerType, subject, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler(Type handlerType, string subject)
+	public NatsMessageQueueConfiguration AddReplyHandler(
+		Type handlerType,
+		string subject,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -211,7 +239,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(ReplyRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -219,16 +247,23 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(string subject, string group)
+	public NatsMessageQueueConfiguration AddReplyHandler<THandler>(
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddReplyHandler(handlerType, subject, group);
+		AddReplyHandler(handlerType, subject, group, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddReplyHandler(Type handlerType, string subject, string group)
+	public NatsMessageQueueConfiguration AddReplyHandler(
+		Type handlerType,
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -239,7 +274,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(QueueReplyRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -247,16 +282,16 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession<TSession>(string subject)
+	public NatsMessageQueueConfiguration AddSession<TSession>(string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var sessionType = typeof(TSession);
 
-		AddSession(sessionType, subject);
+		AddSession(sessionType, subject, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession(Type sessionType, string subject)
+	public NatsMessageQueueConfiguration AddSession(Type sessionType, string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = sessionType
 			.GetInterfaces()
@@ -267,7 +302,7 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(SessionRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, true)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, true, natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for session type {sessionType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -275,16 +310,23 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession<TMessage, TSession>(string subject, string group)
+	public NatsMessageQueueConfiguration AddSession<TMessage, TSession>(
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var sessionType = typeof(TSession);
 
-		AddSession(sessionType, subject, group);
+		AddSession(sessionType, subject, group, natsSerializerRegistry);
 
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration AddSession(Type sessionType, string subject, string group)
+	public NatsMessageQueueConfiguration AddSession(
+		Type sessionType,
+		string subject,
+		string group,
+		INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		var typeArguments = sessionType
 			.GetInterfaces()
@@ -295,7 +337,12 @@ public class NatsMessageQueueConfiguration
 			.ToArray();
 
 		var registrationType = typeof(QueueSessionRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, subject, group, true)
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(
+			registrationType,
+			subject,
+			group,
+			true,
+			natsSerializerRegistry)
 			?? throw new InvalidOperationException($"Unable to create a registration for session type {sessionType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);
@@ -319,12 +366,12 @@ public class NatsMessageQueueConfiguration
 		return this;
 	}
 
-	public NatsMessageQueueConfiguration SetSessionReplySubject(string subject)
+	public NatsMessageQueueConfiguration SetSessionReplySubject(string subject, INatsSerializerRegistry? natsSerializerRegistry = null)
 	{
 		if (string.IsNullOrWhiteSpace(subject))
 			throw new ArgumentException($"'{nameof(subject)}' 不得為 Null 或空白字元。", nameof(subject));
 
-		m_SubscribeRegistrations.Add(new SessionReplyRegistration<ReadOnlyMemory<byte>>(subject));
+		m_SubscribeRegistrations.Add(new SessionReplyRegistration(subject, natsSerializerRegistry));
 		_ = m_CoreConfiguration.RegisterSessionReplySubject(subject);
 
 		return this;

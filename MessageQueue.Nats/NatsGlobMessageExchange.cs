@@ -4,21 +4,24 @@ using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal class JetStreamMessageExchange : IMessageExchange
+internal class NatsGlobMessageExchange : IMessageExchange
 {
 	private readonly Glob m_Glob;
+	private readonly string? m_SessionReplySubject;
 	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
 
-	public JetStreamMessageExchange(string pattern, INatsSerializerRegistry? natsSerializerRegistry)
+	public NatsGlobMessageExchange(string pattern, string? sessionReplySubject, INatsSerializerRegistry? natsSerializerRegistry)
 	{
 		m_Glob = Glob.Parse(pattern);
+		m_SessionReplySubject = sessionReplySubject;
 		m_NatsSerializerRegistry = natsSerializerRegistry;
 	}
 
 	public IMessageSender GetMessageSender(string subject, IServiceProvider serviceProvider)
-		=> ActivatorUtilities.CreateInstance<JetStreamMessageSender>(
+		=> ActivatorUtilities.CreateInstance<NatsMessageSender>(
 			serviceProvider,
-			m_NatsSerializerRegistry!);
+			m_NatsSerializerRegistry!,
+			m_SessionReplySubject!);
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
 		=> m_Glob.IsMatch(subject);

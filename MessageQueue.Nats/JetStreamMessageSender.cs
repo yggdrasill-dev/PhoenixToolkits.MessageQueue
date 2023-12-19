@@ -1,21 +1,25 @@
-﻿using DotNet.Globbing;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
-internal class JetStreamMessageSender : IMessageSender, IMessageExchange
+internal class JetStreamMessageSender : IMessageSender
 {
-	private readonly Glob m_Glob;
 	private readonly INatsJSContext m_JetStream;
+	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
 	private readonly ILogger<JetStreamMessageSender> m_Logger;
 
-	public JetStreamMessageSender(string glob, INatsJSContext jetStream, ILogger<JetStreamMessageSender> logger)
+	public JetStreamMessageSender(
+		INatsSerializerRegistry? natsSerializerRegistry,
+		INatsConnectionManager natsConnectionManager,
+		ILogger<JetStreamMessageSender> logger)
 	{
-		m_Glob = Glob.Parse(glob);
-		m_JetStream = jetStream ?? throw new ArgumentNullException(nameof(jetStream));
+		ArgumentNullException.ThrowIfNull(natsConnectionManager);
+
+		m_JetStream = natsConnectionManager.CreateJsContext();
+		m_NatsSerializerRegistry = natsSerializerRegistry;
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
@@ -45,11 +49,18 @@ internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 					headers.Add(new MessageHeaderValue(key, value));
 			});
 
-		var ack = await m_JetStream.PublishAsync(
-			subject,
-			data,
-			headers: MakeMsgHeader(appendHeaders),
-			cancellationToken: cancellationToken).ConfigureAwait(false);
+		var ack = m_NatsSerializerRegistry is null
+			? await m_JetStream.PublishAsync(
+				subject,
+				data,
+				headers: MakeMsgHeader(appendHeaders),
+				cancellationToken: cancellationToken).ConfigureAwait(false)
+			: await m_JetStream.PublishAsync(
+				subject,
+				data,
+				headers: MakeMsgHeader(appendHeaders),
+				serializer: m_NatsSerializerRegistry.GetSerializer<TMessage>(),
+				cancellationToken: cancellationToken).ConfigureAwait(false);
 
 		ack.EnsureSuccess();
 	}
@@ -67,12 +78,6 @@ internal class JetStreamMessageSender : IMessageSender, IMessageExchange
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
-
-	public IMessageSender GetMessageSender(string subject, IServiceProvider serviceProvider)
-		=> this;
-
-	public bool Match(string subject, IEnumerable<MessageHeaderValue> header)
-		=> m_Glob.IsMatch(subject);
 
 	private NatsHeaders MakeMsgHeader(IEnumerable<MessageHeaderValue> header)
 	{

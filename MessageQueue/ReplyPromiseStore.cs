@@ -21,28 +21,33 @@ internal class ReplyPromiseStore : IReplyPromiseStore
 
 	public void SetCanceled(Guid id)
 	{
-		if (m_Store.TryGetValue(id, out var tcs))
+		if (m_Store.TryGetValue(id, out var p))
 		{
-			tcs.Cancel();
+			p.Cancel();
 			_ = m_Store.TryRemove(id, out _);
 		}
 	}
 
 	public void SetException(Guid id, Exception ex)
 	{
-		if (m_Store.TryGetValue(id, out var tcs))
+		if (m_Store.TryGetValue(id, out var p))
 		{
-			tcs.ThrowException(ex);
+			p.ThrowException(ex);
 			_ = m_Store.TryRemove(id, out _);
 		}
 	}
 
 	public void SetResult<TReply>(Guid id, Answer<TReply> answer)
 	{
-		if (m_Store.TryGetValue(id, out var tcs))
+		if (m_Store.TryGetValue(id, out var p))
 		{
-			tcs.SetResult(answer);
+			p.SetResult(answer);
 			_ = m_Store.TryRemove(id, out _);
 		}
 	}
+
+	public Type? GetPromiseType(Guid id)
+		=> m_Store.TryGetValue(id, out var p)
+			? p.GetType().GetGenericArguments()[0]
+			: null;
 }
