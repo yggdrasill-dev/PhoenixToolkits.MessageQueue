@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Valhalla.MessageQueue</RootNamespace>
     <PackageId>PhoenixToolkits.MessageQueue</PackageId>
-    <Version>1.9.5-alpha</Version>
+    <Version>1.9.9-beta</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue</Product>
