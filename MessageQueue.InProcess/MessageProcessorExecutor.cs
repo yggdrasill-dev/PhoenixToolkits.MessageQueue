@@ -13,6 +13,7 @@ internal class MessageProcessorExecutor<TMessage, TReply, TProcessor> : IMessage
 	public async ValueTask HandleAsync(InProcessMessage message, CancellationToken cancellationToken = default)
 	{
 		var response = await m_Processor.HandleAsync(
+			message.Subject,
 			(TMessage)message.Message!,
 			cancellationToken).ConfigureAwait(false);
 

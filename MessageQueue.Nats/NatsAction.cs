@@ -4,8 +4,11 @@ internal record NatsAction<TQuestion> : Question<TQuestion>
 {
 	public override bool CanResponse => false;
 
-	public NatsAction(TQuestion data)
+	public override string Subject { get; }
+
+	public NatsAction(string subject, TQuestion data)
 	{
+		Subject = subject;
 		Data = data;
 	}
 
@@ -14,12 +17,12 @@ internal record NatsAction<TQuestion> : Question<TQuestion>
 		IEnumerable<MessageHeaderValue> header,
 		CancellationToken cancellationToken = default)
 		=> throw new NatsReplySubjectNullException();
+	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> ValueTask.CompletedTask;
 
 	public override ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 
 	public override ValueTask FailAsync(string data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
-		=> ValueTask.CompletedTask;
-	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> ValueTask.CompletedTask;
 }

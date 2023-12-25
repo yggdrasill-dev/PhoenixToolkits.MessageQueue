@@ -76,7 +76,9 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 				{
 					var receiver = scope.ServiceProvider.GetRequiredService<TReceiver>();
 
-					await receiver.HandleAsync(payload!.Data!).ConfigureAwait(false);
+					await receiver.HandleAsync(
+						payload.Subject,
+						payload.Data!).ConfigureAwait(false);
 				}
 			}).GetAwaiter().GetResult();
 

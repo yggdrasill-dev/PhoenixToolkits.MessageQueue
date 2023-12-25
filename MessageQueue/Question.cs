@@ -3,6 +3,7 @@
 public abstract record Question<TQuestion>
 {
 	public abstract bool CanResponse { get; }
+	public abstract string Subject { get; }
 	public TQuestion Data { get; protected set; } = default!;
 
 	public abstract ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(

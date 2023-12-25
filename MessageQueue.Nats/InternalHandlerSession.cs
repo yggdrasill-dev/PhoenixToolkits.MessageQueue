@@ -21,7 +21,7 @@ internal class InternalHandlerSession<TMessage, THandler> : IMessageSession<TMes
 			.AddTag("handler", typeof(THandler).Name));
 
 		await m_Handler
-			.HandleAsync(question.Data, cancellationToken)
+			.HandleAsync(question.Subject, question.Data, cancellationToken)
 			.ConfigureAwait(false);
 
 		await question

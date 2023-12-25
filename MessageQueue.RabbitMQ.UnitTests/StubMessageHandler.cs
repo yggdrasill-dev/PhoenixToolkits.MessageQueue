@@ -7,7 +7,10 @@ class StubMessageHandler : IMessageHandler<ReadOnlyMemory<byte>>
 {
     private static readonly TaskCompletionSource<string> _CompletionSource = new();
 
-    public ValueTask HandleAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
+    public ValueTask HandleAsync(
+        string subject,
+        ReadOnlyMemory<byte> data,
+        CancellationToken cancellationToken = default)
     {
         _CompletionSource.TrySetResult(Encoding.UTF8.GetString(data.Span));
 

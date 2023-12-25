@@ -21,7 +21,7 @@ internal class InternalProcessorSession<TMessage, TReply, TProcessor> : IMessage
 			.AddTag("handler", typeof(TProcessor).Name));
 
 		var result = await m_Processor
-			.HandleAsync(question.Data, cancellationToken)
+			.HandleAsync(question.Subject, question.Data, cancellationToken)
 			.ConfigureAwait(false);
 
 		await question

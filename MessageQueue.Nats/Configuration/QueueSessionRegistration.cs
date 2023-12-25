@@ -74,10 +74,12 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 	private Question<TMessage> CreateQuestion(MessageDataInfo<NatsMsg<TMessage>> dataInfo, IMessageSender messageSender)
 		=> m_IsSession
 			? new NatsQuestion<TMessage>(
+				dataInfo.Msg.Subject,
 				dataInfo.Msg.Data!,
 				messageSender,
 				dataInfo.Msg.ReplyTo)
 			: new NatsAction<TMessage>(
+				dataInfo.Msg.Subject,
 				dataInfo.Msg.Data!);
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<TMessage>> dataInfo, CancellationToken cancellationToken)

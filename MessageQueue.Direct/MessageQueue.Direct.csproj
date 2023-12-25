@@ -7,7 +7,7 @@
     <RootNamespace>Valhalla.MessageQueue.Direct</RootNamespace>
     <SqlQueryToolsConnectionString />
     <PackageId>PhoenixToolkits.MessageQueue.Direct</PackageId>
-    <Version>1.9.9-beta</Version>
+    <Version>1.9.10-beta</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue.Direct</Product>

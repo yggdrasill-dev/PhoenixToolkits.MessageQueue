@@ -96,6 +96,7 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 
 			if (data is TData messageData)
 				await handler.HandleAsync(
+					subject,
 					messageData,
 					cancellationToken).ConfigureAwait(false);
 			else

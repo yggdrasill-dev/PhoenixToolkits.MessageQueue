@@ -2,16 +2,21 @@
 
 internal record NatsQuestion<TQuestion> : Question<TQuestion>
 {
-	private readonly string? m_ReplySubject;
-	private readonly IMessageSender m_MessageSender;
 
 	public override bool CanResponse => !string.IsNullOrEmpty(m_ReplySubject);
 
+	public override string Subject { get; }
+
+	private readonly IMessageSender m_MessageSender;
+	private readonly string? m_ReplySubject;
+
 	public NatsQuestion(
+		string subject,
 		TQuestion data,
 		IMessageSender messageSender,
 		string? replySubject)
 	{
+		Subject = subject;
 		Data = data;
 		m_ReplySubject = replySubject;
 		m_MessageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
@@ -28,14 +33,14 @@ internal record NatsQuestion<TQuestion> : Question<TQuestion>
 				header.Concat(new[] { new MessageHeaderValue(MessageHeaderValueConsts.SessionAskKey, string.Empty) }),
 				cancellationToken)
 			: throw new NatsReplySubjectNullException();
+	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
+		=> CanResponse
+			? m_MessageSender.PublishAsync(m_ReplySubject!, Array.Empty<byte>(), header, cancellationToken)
+			: throw new NatsReplySubjectNullException();
 
 	public override ValueTask CompleteAsync<TReply>(TReply data, IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
 		=> CanResponse
 			? m_MessageSender.PublishAsync(m_ReplySubject!, data, header, cancellationToken)
-			: throw new NatsReplySubjectNullException();
-	public override ValueTask CompleteAsync(IEnumerable<MessageHeaderValue> header, CancellationToken cancellationToken = default)
-		=> CanResponse
-			? m_MessageSender.PublishAsync(m_ReplySubject!, Array.Empty<byte>(), header, cancellationToken)
 			: throw new NatsReplySubjectNullException();
 
 	public override ValueTask FailAsync(
@@ -45,4 +50,5 @@ internal record NatsQuestion<TQuestion> : Question<TQuestion>
 		=> CanResponse
 			? m_MessageSender.PublishFailAsync(m_ReplySubject!, data, header, cancellationToken: cancellationToken)
 			: throw new NatsReplySubjectNullException();
+
 }

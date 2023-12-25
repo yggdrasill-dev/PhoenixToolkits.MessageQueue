@@ -2,5 +2,5 @@
 
 public interface IMessageHandler<in TMessage>
 {
-	ValueTask HandleAsync(TMessage data, CancellationToken cancellationToken = default);
+	ValueTask HandleAsync(string subject, TMessage data, CancellationToken cancellationToken = default);
 }
