@@ -6,6 +6,8 @@ public interface IAcknowledgeMessage<TMessage>
 
 	TMessage? Data { get; }
 
+	IEnumerable<MessageHeaderValue>? HeaderValues { get; }
+
 	ValueTask AckAsync(CancellationToken cancellationToken = default);
 
 	ValueTask AckProgressAsync(CancellationToken cancellationToken = default);

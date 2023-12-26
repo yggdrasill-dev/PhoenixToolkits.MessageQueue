@@ -10,6 +10,10 @@ public readonly struct NatsAcknowledgeMessage<TMessage> : IAcknowledgeMessage<TM
 
 	public string Subject => m_Msg.Subject;
 
+	public IEnumerable<MessageHeaderValue>? HeaderValues => m_Msg.Headers
+		?.SelectMany(kv => kv.Value
+			.Select(v => new MessageHeaderValue(kv.Key, v)));
+
 	public NatsAcknowledgeMessage(NatsJSMsg<TMessage> msg)
 	{
 		m_Msg = msg;

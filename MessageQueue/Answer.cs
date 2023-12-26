@@ -4,6 +4,7 @@ public abstract record Answer<TAnswer>
 {
 	public abstract bool CanResponse { get; }
 	public TAnswer Result { get; protected set; } = default!;
+	public IEnumerable<MessageHeaderValue>? HeaderValues { get; protected set; }
 
 	public abstract ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		TMessage data,

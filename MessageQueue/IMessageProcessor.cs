@@ -2,5 +2,9 @@
 
 public interface IMessageProcessor<in TMessage, TReply>
 {
-	ValueTask<TReply> HandleAsync(string subject, TMessage data, CancellationToken cancellationToken = default);
+	ValueTask<TReply> HandleAsync(
+		string subject,
+		TMessage data,
+		IEnumerable<MessageHeaderValue>? headerValues,
+		CancellationToken cancellationToken = default);
 }

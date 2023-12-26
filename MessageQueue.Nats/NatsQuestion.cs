@@ -2,10 +2,7 @@
 
 internal record NatsQuestion<TQuestion> : Question<TQuestion>
 {
-
 	public override bool CanResponse => !string.IsNullOrEmpty(m_ReplySubject);
-
-	public override string Subject { get; }
 
 	private readonly IMessageSender m_MessageSender;
 	private readonly string? m_ReplySubject;
@@ -13,11 +10,13 @@ internal record NatsQuestion<TQuestion> : Question<TQuestion>
 	public NatsQuestion(
 		string subject,
 		TQuestion data,
+		IEnumerable<MessageHeaderValue>? headerValues,
 		IMessageSender messageSender,
 		string? replySubject)
 	{
 		Subject = subject;
 		Data = data;
+		HeaderValues = headerValues;
 		m_ReplySubject = replySubject;
 		m_MessageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
 	}
@@ -50,5 +49,4 @@ internal record NatsQuestion<TQuestion> : Question<TQuestion>
 		=> CanResponse
 			? m_MessageSender.PublishFailAsync(m_ReplySubject!, data, header, cancellationToken: cancellationToken)
 			: throw new NatsReplySubjectNullException();
-
 }

@@ -5,12 +5,14 @@ internal record DirectQuestion<TQuestion> : Question<TQuestion>
 
 	public override bool CanResponse => true;
 
-	public override string Subject { get; }
-
-	public DirectQuestion(string subject, TQuestion data)
+	public DirectQuestion(
+		string subject,
+		TQuestion data,
+		IEnumerable<MessageHeaderValue>? headerValues)
 	{
 		Subject = subject;
 		Data = data;
+		HeaderValues = headerValues;
 	}
 
 	public override async ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(

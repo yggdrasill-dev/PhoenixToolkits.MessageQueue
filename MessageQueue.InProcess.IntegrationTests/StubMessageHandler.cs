@@ -7,6 +7,7 @@ internal class StubMessageHandler(PromiseStore promiseStore) : IMessageHandler<R
     public ValueTask HandleAsync(
         string subject,
         ReadOnlyMemory<byte> data,
+        IEnumerable<MessageHeaderValue>? headerValues,
         CancellationToken cancellationToken = default)
     {
         var id = new Guid(data.Span);

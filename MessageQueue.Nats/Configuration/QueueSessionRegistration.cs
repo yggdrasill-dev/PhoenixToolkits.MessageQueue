@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
@@ -76,11 +77,17 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 			? new NatsQuestion<TMessage>(
 				dataInfo.Msg.Subject,
 				dataInfo.Msg.Data!,
+				dataInfo.Msg.Headers?
+					.SelectMany(kv => kv.Value
+						.Select(v => new MessageHeaderValue(kv.Key, v))),
 				messageSender,
 				dataInfo.Msg.ReplyTo)
 			: new NatsAction<TMessage>(
 				dataInfo.Msg.Subject,
-				dataInfo.Msg.Data!);
+				dataInfo.Msg.Data!,
+				dataInfo.Msg.Headers?
+					.SelectMany(kv => kv.Value
+						.Select(v => new MessageHeaderValue(kv.Key, v))));
 
 	private async ValueTask HandleMessageAsync(MessageDataInfo<NatsMsg<TMessage>> dataInfo, CancellationToken cancellationToken)
 	{

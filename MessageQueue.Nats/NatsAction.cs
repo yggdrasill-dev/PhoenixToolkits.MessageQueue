@@ -4,12 +4,11 @@ internal record NatsAction<TQuestion> : Question<TQuestion>
 {
 	public override bool CanResponse => false;
 
-	public override string Subject { get; }
-
-	public NatsAction(string subject, TQuestion data)
+	public NatsAction(string subject, TQuestion data, IEnumerable<MessageHeaderValue>? headerValues)
 	{
 		Subject = subject;
 		Data = data;
+		HeaderValues = headerValues;
 	}
 
 	public override ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(

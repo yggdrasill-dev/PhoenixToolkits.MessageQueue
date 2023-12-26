@@ -20,12 +20,14 @@ internal class InternalProcessorSession<TMessage, TReply, TProcessor> : IMessage
 		_ = (activity?.AddTag("mq", "NATS")
 			.AddTag("handler", typeof(TProcessor).Name));
 
-		var result = await m_Processor
-			.HandleAsync(question.Subject, question.Data, cancellationToken)
-			.ConfigureAwait(false);
+		var result = await m_Processor.HandleAsync(
+			question.Subject,
+			question.Data,
+			question.HeaderValues,
+			cancellationToken).ConfigureAwait(false);
 
-		await question
-			.CompleteAsync(result, cancellationToken)
-			.ConfigureAwait(false);
+		await question.CompleteAsync(
+			result,
+			cancellationToken).ConfigureAwait(false);
 	}
 }

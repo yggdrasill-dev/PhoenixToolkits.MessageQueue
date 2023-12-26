@@ -78,7 +78,8 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 
 					await receiver.HandleAsync(
 						payload.Subject,
-						payload.Data!).ConfigureAwait(false);
+						payload.Data!,
+						payload.Headers).ConfigureAwait(false);
 				}
 			}).GetAwaiter().GetResult();
 

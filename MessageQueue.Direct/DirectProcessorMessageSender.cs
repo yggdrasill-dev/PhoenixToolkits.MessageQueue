@@ -50,6 +50,7 @@ internal class DirectProcessorMessageSender<TData, TResult, TMessageProcessor> :
 				var result = await handler.HandleAsync(
 					subject,
 					messageData,
+					header,
 					cancellationToken).ConfigureAwait(false);
 
 				return (TReply)(object)result!;

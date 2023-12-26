@@ -71,6 +71,7 @@ internal class MessageQueueBackground : BackgroundService
 
 							await handlerExecutor.HandleAsync(
 								msg,
+								msg.MessageHeaders,
 								cts.Token).ConfigureAwait(false);
 						}
 						else

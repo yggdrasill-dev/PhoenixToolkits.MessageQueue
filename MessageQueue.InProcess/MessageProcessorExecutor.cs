@@ -10,11 +10,15 @@ internal class MessageProcessorExecutor<TMessage, TReply, TProcessor> : IMessage
 		m_Processor = processor ?? throw new ArgumentNullException(nameof(processor));
 	}
 
-	public async ValueTask HandleAsync(InProcessMessage message, CancellationToken cancellationToken = default)
+	public async ValueTask HandleAsync(
+		InProcessMessage message,
+		IEnumerable<MessageHeaderValue>? headerValues,
+		CancellationToken cancellationToken = default)
 	{
 		var response = await m_Processor.HandleAsync(
 			message.Subject,
 			(TMessage)message.Message!,
+			headerValues,
 			cancellationToken).ConfigureAwait(false);
 
 		message.CompletionSource.SetResult(response);

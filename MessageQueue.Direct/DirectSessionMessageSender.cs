@@ -30,7 +30,7 @@ internal class DirectSessionMessageSender<TQuestion, TMessageSession> : IMessage
 		{
 			var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
 
-			var question = new DirectQuestion<TQuestion>(subject, (TQuestion)(object)data!);
+			var question = new DirectQuestion<TQuestion>(subject, (TQuestion)(object)data!, header);
 
 			_ = Task.Run(() => handler.HandleAsync(
 				question,

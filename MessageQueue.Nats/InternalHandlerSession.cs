@@ -20,12 +20,14 @@ internal class InternalHandlerSession<TMessage, THandler> : IMessageSession<TMes
 		_ = (activity?.AddTag("mq", "NATS")
 			.AddTag("handler", typeof(THandler).Name));
 
-		await m_Handler
-			.HandleAsync(question.Subject, question.Data, cancellationToken)
-			.ConfigureAwait(false);
+		await m_Handler.HandleAsync(
+				question.Subject,
+				question.Data,
+				question.HeaderValues,
+				cancellationToken).ConfigureAwait(false);
 
-		await question
-			.CompleteAsync(Array.Empty<byte>(), cancellationToken)
-			.ConfigureAwait(false);
+		await question.CompleteAsync(
+			Array.Empty<byte>(),
+			cancellationToken).ConfigureAwait(false);
 	}
 }

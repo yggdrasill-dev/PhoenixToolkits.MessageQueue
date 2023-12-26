@@ -35,6 +35,7 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 		_ = HandleMessageAsync(
 			subject,
 			data,
+			header,
 			cancellationToken).AsTask()
 			.ContinueWith(
 				async t =>
@@ -76,12 +77,14 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 		await HandleMessageAsync(
 			subject,
 			data,
+			header.ToArray(),
 			cancellationToken).ConfigureAwait(false);
 	}
 
 	private async ValueTask HandleMessageAsync<TMessage>(
 		string subject,
 		TMessage data,
+		IEnumerable<MessageHeaderValue>? headerValues,
 		CancellationToken cancellationToken)
 	{
 		using var activity = DirectDiagnostics.ActivitySource.StartActivity(subject);
@@ -98,6 +101,7 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 				await handler.HandleAsync(
 					subject,
 					messageData,
+					headerValues,
 					cancellationToken).ConfigureAwait(false);
 			else
 				throw new InvalidCastException($"type {typeof(TMessage).Name} Can't cast type {typeof(TData).Name}");

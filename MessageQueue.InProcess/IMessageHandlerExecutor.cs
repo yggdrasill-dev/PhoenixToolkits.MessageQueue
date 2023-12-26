@@ -2,5 +2,8 @@
 
 internal interface IMessageHandlerExecutor
 {
-	ValueTask HandleAsync(InProcessMessage message, CancellationToken cancellationToken = default);
+	ValueTask HandleAsync(
+		InProcessMessage message,
+		IEnumerable<MessageHeaderValue>? headerValues,
+		CancellationToken cancellationToken = default);
 }

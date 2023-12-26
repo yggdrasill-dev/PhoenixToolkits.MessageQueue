@@ -82,8 +82,12 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 
 				var msg = deserializer.Deserialize(new ReadOnlySequence<byte>(dataInfo.Args.Body));
 
-				await handler
-					.HandleAsync(dataInfo.Args.RoutingKey, msg!, cts.Token)
+				await handler.HandleAsync(
+					dataInfo.Args.RoutingKey,
+					msg!,
+					dataInfo.Args.BasicProperties.Headers
+						.Select(kv => new MessageHeaderValue(kv.Key, kv.Value.ToString())),
+					cts.Token)
 					.ConfigureAwait(false);
 
 				if (!m_AutoAck)
