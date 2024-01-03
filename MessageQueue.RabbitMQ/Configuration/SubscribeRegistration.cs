@@ -11,10 +11,15 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 	private static readonly Random _Random = new();
 	private readonly bool m_AutoAck;
 	private readonly int m_DispatchConcurrency;
+	private readonly Func<IServiceProvider, THandler> m_HandlerFactory;
 
 	public string Subject { get; }
 
-	public SubscribeRegistration(string subject, bool autoAck, int dispatchConcurrency)
+	public SubscribeRegistration(
+		string subject,
+		bool autoAck,
+		int dispatchConcurrency,
+		Func<IServiceProvider, THandler> handlerFactory)
 	{
 		if (string.IsNullOrEmpty(subject))
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
@@ -22,6 +27,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 		Subject = subject;
 		m_AutoAck = autoAck;
 		m_DispatchConcurrency = dispatchConcurrency;
+		m_HandlerFactory = handlerFactory ?? throw new ArgumentNullException(nameof(handlerFactory));
 	}
 
 	public ValueTask<IDisposable> SubscribeAsync(
@@ -76,7 +82,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
 			await using (scope.ConfigureAwait(false))
 			{
-				var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
+				var handler = m_HandlerFactory(scope.ServiceProvider);
 				var serializeRegistration = scope.ServiceProvider.GetRequiredService<IRabbitMQSerializerRegistry>();
 				var deserializer = serializeRegistration.GetDeserializer<TMessage>();
 

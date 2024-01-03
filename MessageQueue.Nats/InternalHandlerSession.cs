@@ -8,9 +8,9 @@ internal class InternalHandlerSession<TMessage, THandler> : IMessageSession<TMes
 {
 	private readonly THandler m_Handler;
 
-	public InternalHandlerSession(IServiceProvider serviceProvider)
+	public InternalHandlerSession(THandler handler)
 	{
-		m_Handler = ActivatorUtilities.CreateInstance<THandler>(serviceProvider);
+		m_Handler = handler;
 	}
 
 	public async ValueTask HandleAsync(Question<TMessage> question, CancellationToken cancellationToken = default)

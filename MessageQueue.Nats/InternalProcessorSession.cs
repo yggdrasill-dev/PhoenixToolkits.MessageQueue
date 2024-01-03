@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Valhalla.MessageQueue.Nats.Configuration;
+﻿using Valhalla.MessageQueue.Nats.Configuration;
 
 namespace Valhalla.MessageQueue.Nats;
 
@@ -8,9 +7,9 @@ internal class InternalProcessorSession<TMessage, TReply, TProcessor> : IMessage
 {
 	private readonly TProcessor m_Processor;
 
-	public InternalProcessorSession(IServiceProvider serviceProvider)
+	public InternalProcessorSession(TProcessor processor)
 	{
-		m_Processor = ActivatorUtilities.CreateInstance<TProcessor>(serviceProvider);
+		m_Processor = processor;
 	}
 
 	public async ValueTask HandleAsync(Question<TMessage> question, CancellationToken cancellationToken = default)

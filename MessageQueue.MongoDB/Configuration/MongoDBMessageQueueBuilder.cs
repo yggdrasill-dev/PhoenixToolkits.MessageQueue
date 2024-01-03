@@ -10,37 +10,53 @@ public class MongoDBMessageQueueBuilder
 {
 	private readonly Func<IServiceProvider, MongoMessageQueueBuilderOptions> m_Factory;
 	private readonly List<QueueDeclare> m_QueueDeclares = new();
-	private readonly IServiceCollection m_Services;
 	private readonly List<SubscribeRegistration> m_Subscriptions = new();
 
 	public string Name { get; }
 
 	public MongoDBMessageQueueBuilder(
-		IServiceCollection services,
 		string name,
 		Func<IServiceProvider, MongoMessageQueueBuilderOptions> factory)
 	{
 		if (string.IsNullOrWhiteSpace(name))
 			throw new ArgumentException($"'{nameof(name)}' 不得為 Null 或空白字元。", nameof(name));
-		m_Services = services ?? throw new ArgumentNullException(nameof(services));
 		Name = name;
 		m_Factory = factory ?? throw new ArgumentNullException(nameof(factory));
 	}
 
-	public MongoDBMessageQueueBuilder AddHandler<TMessage, THandler>(string queueName, TimeSpan pollTime, int workers = 1)
+	public MongoDBMessageQueueBuilder AddHandler<TMessage, THandler>(
+		string queueName,
+		TimeSpan pollTime,
+		int workers = 1,
+		Func<IServiceProvider, THandler>? handlerFactory = null)
 		where THandler : class, IMessageHandler<TMessage>
-		=> AddHandler(typeof(THandler), queueName, pollTime, workers);
+		=> AddHandler(
+			typeof(THandler),
+			queueName,
+			pollTime,
+			workers,
+			handlerFactory);
 
-	public MongoDBMessageQueueBuilder AddHandler(Type handlerType, string queueName, TimeSpan pollTime, int workers = 1)
+	public MongoDBMessageQueueBuilder AddHandler(
+		Type handlerType,
+		string queueName,
+		TimeSpan pollTime,
+		int workers = 1,
+		Delegate? handlerFactory = null)
 	{
-		m_Services.TryAddTransient(handlerType);
+		var factory = handlerFactory
+			?? (Delegate)typeof(DefaultHandlerFactory<>)
+				.MakeGenericType(handlerType)
+				.GetField("Default")!
+				.GetValue(null)!;
 
 		m_Subscriptions.Add(new SubscribeRegistration
 		{
 			QueueName = queueName,
 			PollTime = pollTime,
 			Workers = workers,
-			HandlerType = handlerType
+			HandlerType = handlerType,
+			HandlerFactory = factory
 		});
 
 		return this;
@@ -88,7 +104,10 @@ public class MongoDBMessageQueueBuilder
 
 								var handlerType = subscriberType.MakeGenericType(typeArguments);
 
-								return serviceProvider.GetRequiredService(handlerType) as IMessageSubscriber;
+								return ActivatorUtilities.CreateInstance(
+									serviceProvider,
+									handlerType,
+									registration.HandlerFactory) as IMessageSubscriber;
 							})
 							.PollTime(registration.PollTime)
 							.Workers(registration.Workers)

@@ -8,12 +8,15 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 {
 	private readonly ILogger<DirectHandlerMessageSender<TData, TMessageHandler>> m_Logger;
 	private readonly IServiceProvider m_ServiceProvider;
+	private readonly Func<IServiceProvider, TMessageHandler> m_MessageHandlerFactory;
 
 	public DirectHandlerMessageSender(
+		Func<IServiceProvider, TMessageHandler> messageHandlerFactory,
 		IServiceProvider serviceProvider,
 		ILogger<DirectHandlerMessageSender<TData, TMessageHandler>> logger)
 	{
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+		m_MessageHandlerFactory = messageHandlerFactory ?? throw new ArgumentNullException(nameof(messageHandlerFactory));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
@@ -95,7 +98,7 @@ internal class DirectHandlerMessageSender<TData, TMessageHandler> : IMessageSend
 		var scope = m_ServiceProvider.CreateAsyncScope();
 		await using (scope.ConfigureAwait(false))
 		{
-			var handler = ActivatorUtilities.CreateInstance<TMessageHandler>(scope.ServiceProvider);
+			var handler = m_MessageHandlerFactory(scope.ServiceProvider);
 
 			if (data is TData messageData)
 				await handler.HandleAsync(

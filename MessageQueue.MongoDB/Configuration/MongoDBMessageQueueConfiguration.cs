@@ -20,7 +20,6 @@ public class MongoDBMessageQueueConfiguration
 		Func<IServiceProvider, MongoMessageQueueBuilderOptions> messageQueueFactory)
 	{
 		var builder = new MongoDBMessageQueueBuilder(
-			Services,
 			managerName,
 			messageQueueFactory);
 

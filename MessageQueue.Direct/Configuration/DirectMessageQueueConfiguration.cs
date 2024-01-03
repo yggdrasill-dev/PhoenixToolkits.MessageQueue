@@ -17,16 +17,16 @@ public class DirectMessageQueueConfiguration
 		Services = messageQueueConfiguration.Services;
 	}
 
-	public DirectMessageQueueConfiguration AddHandler<THandler>(string subject)
+	public DirectMessageQueueConfiguration AddHandler<THandler>(string subject, Func<IServiceProvider, THandler>? handlerFactory = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddHandler(handlerType, subject);
+		AddHandler(handlerType, subject, handlerFactory);
 
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddHandler(Type handlerType, string subject)
+	public DirectMessageQueueConfiguration AddHandler(Type handlerType, string subject, Delegate? handlerFactory = null)
 	{
 		var typeArguments = handlerType.GetInterfaces()
 			.Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IMessageHandler<>))
@@ -35,8 +35,14 @@ public class DirectMessageQueueConfiguration
 			.Append(handlerType)
 			.ToArray();
 
+		var factory = handlerFactory
+			?? typeof(DefaultHandlerFactory<>)
+				.MakeGenericType(handlerType)
+				.GetField("Default")!
+				.GetValue(null);
+
 		var registrationType = typeof(HandlerRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject), factory)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		_SubscribeRegistrations.Add(registration);
@@ -44,16 +50,16 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddProcessor<TProcessor>(string subject)
+	public DirectMessageQueueConfiguration AddProcessor<TProcessor>(string subject, Func<IServiceProvider, TProcessor>? processorFactory = null)
 	{
 		var processorType = typeof(TProcessor);
 
-		AddProcessor(processorType, subject);
+		AddProcessor(processorType, subject, processorFactory);
 
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddProcessor(Type processorType, string subject)
+	public DirectMessageQueueConfiguration AddProcessor(Type processorType, string subject, Delegate? processorFactory = null)
 	{
 		var typeArguments = processorType.GetInterfaces()
 			.Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IMessageProcessor<,>))
@@ -62,8 +68,14 @@ public class DirectMessageQueueConfiguration
 			.Append(processorType)
 			.ToArray();
 
+		var factory = processorFactory
+			?? typeof(DefaultHandlerFactory<>)
+				.MakeGenericType(processorType)
+				.GetField("Default")!
+				.GetValue(null);
+
 		var registrationType = typeof(ProcessorRegistration<,,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject), factory)
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {processorType.FullName}");
 
 		_SubscribeRegistrations.Add(registration);
@@ -71,16 +83,16 @@ public class DirectMessageQueueConfiguration
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddSession<TSession>(string subject)
+	public DirectMessageQueueConfiguration AddSession<TSession>(string subject, Func<IServiceProvider, TSession>? sessionFactory = null)
 	{
 		var sessionType = typeof(TSession);
 
-		AddSession(sessionType, subject);
+		AddSession(sessionType, subject, sessionFactory);
 
 		return this;
 	}
 
-	public DirectMessageQueueConfiguration AddSession(Type sessionType, string subject)
+	public DirectMessageQueueConfiguration AddSession(Type sessionType, string subject, Delegate? sessionFactory = null)
 	{
 		var typeArguments = sessionType
 			.GetInterfaces()
@@ -90,8 +102,14 @@ public class DirectMessageQueueConfiguration
 			.Append(sessionType)
 			.ToArray();
 
+		var factory = sessionFactory
+			?? typeof(DefaultHandlerFactory<>)
+				.MakeGenericType(sessionType)
+				.GetField("Default")!
+				.GetValue(null);
+
 		var registrationType = typeof(SessionRegistration<,>).MakeGenericType(typeArguments);
-		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject))
+		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType, Glob.Parse(subject), factory)
 			?? throw new InvalidOperationException($"Unable to create a registration for processor type {sessionType.FullName}");
 
 		_SubscribeRegistrations.Add(registration);

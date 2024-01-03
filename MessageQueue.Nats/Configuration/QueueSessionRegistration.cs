@@ -11,6 +11,7 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 {
 	private readonly bool m_IsSession;
 	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
+	private readonly Func<IServiceProvider, TMessageSession> m_MessageSessionFactory;
 
 	public string Queue { get; }
 
@@ -19,8 +20,9 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 	public QueueSessionRegistration(
 		string subject,
 		string queue,
-		bool isSession = true,
-		INatsSerializerRegistry? natsSerializerRegistry = null)
+		bool isSession,
+		INatsSerializerRegistry? natsSerializerRegistry,
+		Func<IServiceProvider, TMessageSession> messageSessionFactory)
 	{
 		if (string.IsNullOrEmpty(subject))
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
@@ -30,6 +32,7 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 		Queue = queue;
 		m_IsSession = isSession;
 		m_NatsSerializerRegistry = natsSerializerRegistry;
+		m_MessageSessionFactory = messageSessionFactory;
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -119,7 +122,7 @@ internal class QueueSessionRegistration<TMessage, TMessageSession> : ISubscribeR
 			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
 			await using (scope.ConfigureAwait(false))
 			{
-				var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
+				var handler = m_MessageSessionFactory(scope.ServiceProvider);
 				var messageSender = scope.ServiceProvider.GetRequiredService<IMessageSender>();
 				var question = CreateQuestion(dataInfo, messageSender);
 

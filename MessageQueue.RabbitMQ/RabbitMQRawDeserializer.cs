@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 
 namespace Valhalla.MessageQueue.RabbitMQ;
 
@@ -30,19 +31,22 @@ public class RabbitMQRawDeserializer<T> : IRabbitMQDeserializer<T>
 	{
 		if (typeof(T) == typeof(byte[]))
 		{
-			result = (T)(object)span.ToArray();
+			var arr = span.ToArray();
+			result = Unsafe.As<byte[], T>(ref arr);
 			return true;
 		}
 
 		if (typeof(T) == typeof(Memory<byte>))
 		{
-			result = (T)(object)new Memory<byte>(span.ToArray());
+			var memory = new Memory<byte>(span.ToArray());
+			result = Unsafe.As<Memory<byte>, T>(ref memory);
 			return true;
 		}
 
 		if (typeof(T) == typeof(ReadOnlyMemory<byte>))
 		{
-			result = (T)(object)new ReadOnlyMemory<byte>(span.ToArray());
+			var memory = new ReadOnlyMemory<byte>(span.ToArray());
+			result = Unsafe.As<ReadOnlyMemory<byte>, T>(ref memory);
 			return true;
 		}
 

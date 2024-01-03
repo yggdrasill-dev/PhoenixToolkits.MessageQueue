@@ -22,6 +22,5 @@ public static class ServiceCollectionExtensions
 	private static void InitialRabbitMessageQueueConfiguration(MongoDBMessageQueueConfiguration configuration)
 		=> configuration.Services
 			.AddHostedService<MessageQueueBackground>()
-			.AddSingleton<QueueManagerService>()
-			.AddTransient(typeof(MessageSubscriber<,>));
+			.AddSingleton<QueueManagerService>();
 }

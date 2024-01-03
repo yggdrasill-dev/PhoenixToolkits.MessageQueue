@@ -5,11 +5,14 @@ namespace Valhalla.MessageQueue.Direct;
 internal class DirectSessionMessageSender<TQuestion, TMessageSession> : IMessageSender
 	where TMessageSession : IMessageSession<TQuestion>
 {
+	private readonly Func<IServiceProvider, TMessageSession> m_SessionFactory;
 	private readonly IServiceProvider m_ServiceProvider;
 
 	public DirectSessionMessageSender(
+		Func<IServiceProvider, TMessageSession> sessionFactory,
 		IServiceProvider serviceProvider)
 	{
+		m_SessionFactory = sessionFactory ?? throw new ArgumentNullException(nameof(sessionFactory));
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 	}
 
@@ -28,7 +31,7 @@ internal class DirectSessionMessageSender<TQuestion, TMessageSession> : IMessage
 		var scope = m_ServiceProvider.CreateAsyncScope();
 		await using (scope.ConfigureAwait(false))
 		{
-			var handler = ActivatorUtilities.CreateInstance<TMessageSession>(scope.ServiceProvider);
+			var handler = m_SessionFactory(scope.ServiceProvider);
 
 			var question = new DirectQuestion<TQuestion>(subject, (TQuestion)(object)data!, header);
 

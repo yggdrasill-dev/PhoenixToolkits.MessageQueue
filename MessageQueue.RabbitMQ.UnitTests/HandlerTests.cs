@@ -21,14 +21,18 @@ public class HandlerTests
     public async Task Registration_Handler執行()
     {
         // Arrange
-        var sut = new SubscribeRegistration<ReadOnlyMemory<byte>, StubMessageHandler>("test", true, 1);
-
         var fakeMessageReceiver = Substitute.For<IMessageReceiver<RabbitSubscriptionSettings>>();
         var serviceProvider = new ServiceCollection()
             .AddMessageQueue()
             .AddRabbitMessageQueue(config => { })
             .Services
             .BuildServiceProvider();
+
+        var sut = new SubscribeRegistration<ReadOnlyMemory<byte>, StubMessageHandler>(
+            "test",
+            true,
+            1,
+           sp => new StubMessageHandler());
 
         var message = "aaa";
 

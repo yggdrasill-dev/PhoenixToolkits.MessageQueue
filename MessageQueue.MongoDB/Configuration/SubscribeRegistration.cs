@@ -9,4 +9,6 @@ internal class SubscribeRegistration
 	public string QueueName { get; init; } = default!;
 
 	public int Workers { get; init; }
+
+	public Delegate HandlerFactory { get; init; } = default!;
 }

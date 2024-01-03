@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 
 namespace Valhalla.MessageQueue.Nats.Configuration;
@@ -10,7 +11,10 @@ internal class ProcessRegistration<TMessage, TReply, TProcessor> : ISubscribeReg
 
 	public string Subject { get; }
 
-	public ProcessRegistration(string subject, INatsSerializerRegistry? natsSerializerRegistry)
+	public ProcessRegistration(
+		string subject,
+		INatsSerializerRegistry? natsSerializerRegistry,
+		Func<IServiceProvider, TProcessor> processorFactory)
 	{
 		if (string.IsNullOrEmpty(subject))
 			throw new ArgumentException($"'{nameof(subject)}' is not Null or Empty.", nameof(subject));
@@ -19,7 +23,9 @@ internal class ProcessRegistration<TMessage, TReply, TProcessor> : ISubscribeReg
 		m_SessionRegistration = new SessionRegistration<TMessage, InternalProcessorSession<TMessage, TReply, TProcessor>>(
 			subject,
 			true,
-			natsSerializerRegistry);
+			natsSerializerRegistry,
+			sp => ActivatorUtilities
+				.CreateInstance<InternalProcessorSession<TMessage, TReply, TProcessor>>(sp, processorFactory(sp)));
 	}
 
 	public ValueTask<IDisposable?> SubscribeAsync(

@@ -11,11 +11,16 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 	where TReceiver : class, IMessageHandler<TMessage>
 {
 	private readonly ILogger<MessageSubscriber<TMessage, TReceiver>> m_Logger;
+	private readonly Func<IServiceProvider, TReceiver> m_ReceiverFactory;
 	private readonly IServiceProvider m_ServiceProvider;
 	private bool m_DisposedValue;
 
-	public MessageSubscriber(IServiceProvider serviceProvider, ILogger<MessageSubscriber<TMessage, TReceiver>> logger)
+	public MessageSubscriber(
+		Func<IServiceProvider, TReceiver> receiverFactory,
+		IServiceProvider serviceProvider,
+		ILogger<MessageSubscriber<TMessage, TReceiver>> logger)
 	{
+		m_ReceiverFactory = receiverFactory ?? throw new ArgumentNullException(nameof(receiverFactory));
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
@@ -74,7 +79,7 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 				var scope = m_ServiceProvider.CreateAsyncScope();
 				await using (scope.ConfigureAwait(false))
 				{
-					var receiver = scope.ServiceProvider.GetRequiredService<TReceiver>();
+					var receiver = m_ReceiverFactory(scope.ServiceProvider);
 
 					await receiver.HandleAsync(
 						payload.Subject,

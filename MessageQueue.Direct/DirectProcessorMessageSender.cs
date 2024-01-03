@@ -5,11 +5,14 @@ namespace Valhalla.MessageQueue.Direct;
 internal class DirectProcessorMessageSender<TData, TResult, TMessageProcessor> : IMessageSender
 	where TMessageProcessor : class, IMessageProcessor<TData, TResult>
 {
+	private readonly Func<IServiceProvider, TMessageProcessor> m_ProcessorFactory;
 	private readonly IServiceProvider m_ServiceProvider;
 
 	public DirectProcessorMessageSender(
+		Func<IServiceProvider, TMessageProcessor> processorFactory,
 		IServiceProvider serviceProvider)
 	{
+		m_ProcessorFactory = processorFactory ?? throw new ArgumentNullException(nameof(processorFactory));
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 	}
 
@@ -43,7 +46,7 @@ internal class DirectProcessorMessageSender<TData, TResult, TMessageProcessor> :
 		var scope = m_ServiceProvider.CreateAsyncScope();
 		await using (scope.ConfigureAwait(false))
 		{
-			var handler = ActivatorUtilities.CreateInstance<TMessageProcessor>(scope.ServiceProvider);
+			var handler = m_ProcessorFactory(scope.ServiceProvider);
 
 			if (data is TData messageData)
 			{

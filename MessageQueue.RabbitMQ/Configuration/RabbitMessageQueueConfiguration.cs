@@ -30,11 +30,20 @@ public class RabbitMessageQueueConfiguration
 		_ = Services.AddSingleton<IEnumerable<ISubscribeRegistration>>(m_SubscribeRegistrations);
 	}
 
-	public RabbitMessageQueueConfiguration AddHandler<THandler>(string queueName, bool autoAck = true, int dispatchConcurrency = 1)
+	public RabbitMessageQueueConfiguration AddHandler<THandler>(
+		string queueName,
+		bool autoAck = true,
+		int dispatchConcurrency = 1,
+		Func<IServiceProvider, THandler>? handlerFactory = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddHandler(handlerType, queueName, autoAck, dispatchConcurrency);
+		AddHandler(
+			handlerType,
+			queueName,
+			autoAck,
+			dispatchConcurrency,
+			handlerFactory);
 
 		return this;
 	}
@@ -43,7 +52,8 @@ public class RabbitMessageQueueConfiguration
 		Type handlerType,
 		string queueName,
 		bool autoAck = true,
-		int dispatchConcurrency = 1)
+		int dispatchConcurrency = 1,
+		Delegate? handlerFactory = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -53,12 +63,19 @@ public class RabbitMessageQueueConfiguration
 			.Append(handlerType)
 			.ToArray();
 
+		var factory = handlerFactory
+			?? typeof(DefaultHandlerFactory<>)
+				.MakeGenericType(handlerType)
+				.GetField("Default")!
+				.GetValue(null);
+
 		var registrationType = typeof(SubscribeRegistration<,>).MakeGenericType(typeArguments);
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(
 			registrationType,
 			queueName,
 			autoAck,
-			dispatchConcurrency)
+			dispatchConcurrency,
+			factory)
 			?? throw new InvalidOperationException(
 				$"Unable to create registration for handler type {handlerType.FullName}");
 
