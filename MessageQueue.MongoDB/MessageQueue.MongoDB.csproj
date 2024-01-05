@@ -14,7 +14,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue.git</RepositoryUrl>
     <PackageTags>Valhalla;MessageQueue;MongoDB</PackageTags>
-    <Version>1.9.12-beta</Version>
+    <Version>2.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
