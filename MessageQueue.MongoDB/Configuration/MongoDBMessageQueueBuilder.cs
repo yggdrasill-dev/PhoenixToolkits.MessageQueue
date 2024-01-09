@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Messaging;
 using MongoDB.Messaging.Service;
 using MongoDB.Messaging.Subscription;
@@ -24,12 +23,11 @@ public class MongoDBMessageQueueBuilder
 		m_Factory = factory ?? throw new ArgumentNullException(nameof(factory));
 	}
 
-	public MongoDBMessageQueueBuilder AddHandler<TMessage, THandler>(
+	public MongoDBMessageQueueBuilder AddHandler<THandler>(
 		string queueName,
 		TimeSpan pollTime,
 		int workers = 1,
 		Func<IServiceProvider, THandler>? handlerFactory = null)
-		where THandler : class, IMessageHandler<TMessage>
 		=> AddHandler(
 			typeof(THandler),
 			queueName,

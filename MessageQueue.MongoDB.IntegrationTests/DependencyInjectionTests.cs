@@ -28,7 +28,7 @@ public class DependencyInjectionTests
                         ConnectionString = "mongodb://localhost/Messaging"
                     })
                 .DeclareQueue("queue")
-                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
+                .AddHandler<StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
 
         var serviceProvider = services.BuildServiceProvider();
 
@@ -54,7 +54,7 @@ public class DependencyInjectionTests
                         ConnectionString = "mongodb://localhost/Messaging"
                     })
                 .DeclareQueue("queue")
-                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
+                .AddHandler<StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
 
         var serviceProvider = services.BuildServiceProvider();
 
@@ -86,7 +86,7 @@ public class DependencyInjectionTests
                         ConnectionString = "mongodb://localhost/Messaging"
                     })
                 .DeclareQueue("queue")
-                .AddHandler<ReadOnlyMemory<byte>, StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
+                .AddHandler<StubMessageHandler>("test", TimeSpan.FromSeconds(1)));
 
         var serviceProvider = services.BuildServiceProvider();
 
