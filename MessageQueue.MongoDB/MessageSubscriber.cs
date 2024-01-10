@@ -70,10 +70,10 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 					new KeyValuePair<string, object?>("handler", typeof(TReceiver).Name)
 				});
 
-		var payload = processContext.Data<MongoMessage<TMessage>>();
-
 		try
 		{
+			var payload = processContext.Data<MongoMessage<TMessage>>();
+
 			Task.Run(async () =>
 			{
 				var scope = m_ServiceProvider.CreateAsyncScope();
