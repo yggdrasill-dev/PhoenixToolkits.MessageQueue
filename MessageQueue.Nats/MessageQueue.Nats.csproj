@@ -7,7 +7,7 @@
     <RootNamespace>Valhalla.MessageQueue.Nats</RootNamespace>
     <SqlQueryToolsConnectionString />
     <PackageId>PhoenixToolkits.MessageQueue.Nats</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue.Nats</Product>

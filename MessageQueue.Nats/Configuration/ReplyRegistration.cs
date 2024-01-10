@@ -23,7 +23,7 @@ internal class ReplyRegistration<TMessage, THandler> : ISubscribeRegistration
 			natsSerializerRegistry,
 			sp => ActivatorUtilities.CreateInstance<InternalHandlerSession<TMessage, THandler>>(
 				sp,
-				handlerFactoroy));
+				handlerFactoroy(sp)));
 	}
 
 	public ValueTask<IDisposable?> SubscribeAsync(
