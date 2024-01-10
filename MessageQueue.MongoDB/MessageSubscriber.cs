@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Messaging;
@@ -72,7 +74,7 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 
 		try
 		{
-			var payload = processContext.Data<MongoMessage<TMessage>>();
+			var payload = MessageSubscriber<TMessage, TReceiver>.GetMongoMessage<TMessage>(processContext);
 
 			Task.Run(async () =>
 			{
@@ -121,5 +123,42 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 	protected virtual ValueTask DisposeAsyncCore()
 	{
 		return ValueTask.CompletedTask;
+	}
+
+	private static MongoMessage<T> GetMongoMessage<T>(ProcessContext processContext)
+	{
+		if (typeof(T) == typeof(Memory<byte>))
+		{
+			var payload = processContext.Data<MongoMessage<byte[]>>();
+
+			var messageData = new Memory<byte>(payload.Data);
+
+			return new MongoMessage<T>
+			{
+				Headers = payload.Headers,
+				Subject = payload.Subject,
+				TraceParent = payload.TraceParent,
+				TraceState = payload.TraceState,
+				Data = Unsafe.As<Memory<byte>, T>(ref messageData),
+			};
+		}
+
+		if (typeof(T) == typeof(ReadOnlyMemory<byte>))
+		{
+			var payload = processContext.Data<MongoMessage<byte[]>>();
+
+			var messageData = new ReadOnlyMemory<byte>(payload.Data);
+
+			return new MongoMessage<T>
+			{
+				Headers = payload.Headers,
+				Subject = payload.Subject,
+				TraceParent = payload.TraceParent,
+				TraceState = payload.TraceState,
+				Data = Unsafe.As<ReadOnlyMemory<byte>, T>(ref messageData),
+			};
+		}
+
+		return processContext.Data<MongoMessage<T>>();
 	}
 }
