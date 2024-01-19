@@ -48,6 +48,8 @@ internal class MessageQueueBackground : BackgroundService
 				subscriptions.Add(subsctiption);
 		}
 
+		m_Logger.LogDebug("Nats subscribe completed.");
+
 		await stoppingToken.ConfigureAwait(false);
 
 		foreach (var sub in subscriptions)
