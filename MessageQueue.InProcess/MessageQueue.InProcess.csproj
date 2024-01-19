@@ -10,7 +10,7 @@
     <Product>PhoenixToolkits.MessageQueue.InProcess</Product>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
-    <Version>2.0.1</Version>
+    <Version>2.1.0</Version>
     <PackageProjectUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue</PackageProjectUrl>
     <RepositoryUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue.git</RepositoryUrl>
     <PackageTags>Valhalla;MessageQueue;InProcess</PackageTags>

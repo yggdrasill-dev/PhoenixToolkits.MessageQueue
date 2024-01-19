@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
 
 		_ = services
 			.AddSingleton<IReplyPromiseStore, ReplyPromiseStore>()
-			.AddTransient<IMessageSender>(
+			.AddSingleton<IMessageSender>(
 				sp => new MultiplexerMessageSender(
 					sp,
 					sp.GetRequiredService<IOptions<MessageExchangeOptions>>().Value.Exchanges));
