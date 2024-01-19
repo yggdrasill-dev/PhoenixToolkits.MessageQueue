@@ -10,21 +10,23 @@ internal record NatsQueueScriptionSettings<TMessage>(
 {
 	public ValueTask<IDisposable> SubscribeAsync(INatsConnectionManager connectionManager, CancellationToken cancellationToken = default)
 	{
-		var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		var ctd = new CancellationTokenDisposable(cancellationToken);
 
-		_ = Task.Run(async () =>
+		async void Core(CancellationToken token)
 		{
 			await foreach (var msg in connectionManager.Connection.SubscribeAsync<TMessage>(
 				Subject,
 				Queue,
 				serializer: Deserializer,
-				cancellationToken: cancellationToken))
+				cancellationToken: token))
 			{
 				if (EventHandler is not null)
-					await EventHandler(msg, cts.Token).ConfigureAwait(false);
+					await EventHandler(msg, token).ConfigureAwait(false);
 			}
-		}, cts.Token);
+		}
 
-		return ValueTask.FromResult((IDisposable)cts);
+		Core(ctd.Token);
+
+		return ValueTask.FromResult((IDisposable)ctd);
 	}
 }

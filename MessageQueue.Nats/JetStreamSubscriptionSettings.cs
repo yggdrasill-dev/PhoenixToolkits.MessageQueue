@@ -21,17 +21,20 @@ record JetStreamSubscriptionSettings<TMessage>(
 			ConsumerConfig,
 			cancellationToken).ConfigureAwait(false);
 
-		var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		var ctd = new CancellationTokenDisposable(cancellationToken);
 
-		_ = Task.Run(async () =>
+		async void Core(INatsJSConsumer jsConsumer, CancellationToken token)
 		{
-			await foreach (var msg in consumer.ConsumeAsync<TMessage>(serializer: Deserializer, cancellationToken: cts.Token))
+			await foreach (var msg in jsConsumer.ConsumeAsync<TMessage>(serializer: Deserializer, cancellationToken: token))
 			{
 				if (EventHandler is not null)
-					await EventHandler(msg, cts.Token).ConfigureAwait(false);
+					await EventHandler(msg, token).ConfigureAwait(false);
 			}
-		}, cts.Token);
+		}
 
-		return cts;
+		Core(consumer, ctd.Token);
+
+		return ctd;
+		;
 	}
 }
