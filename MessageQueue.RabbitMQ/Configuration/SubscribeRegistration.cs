@@ -92,7 +92,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 					dataInfo.Args.RoutingKey,
 					msg!,
 					dataInfo.Args.BasicProperties.Headers
-						.Select(kv => new MessageHeaderValue(kv.Key, kv.Value.ToString())),
+						?.Select(kv => new MessageHeaderValue(kv.Key, kv.Value.ToString())),
 					cts.Token)
 					.ConfigureAwait(false);
 
