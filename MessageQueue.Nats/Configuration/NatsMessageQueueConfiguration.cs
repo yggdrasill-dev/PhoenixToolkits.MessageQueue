@@ -126,11 +126,18 @@ public class NatsMessageQueueConfiguration
 		string subject,
 		string stream,
 		ConsumerConfig consumerConfig,
-		INatsSerializerRegistry? natsSerializerRegistry = null)
+		INatsSerializerRegistry? natsSerializerRegistry = null,
+		Func<IServiceProvider, THandler>? handlerFactory = null)
 	{
 		var handlerType = typeof(THandler);
 
-		AddJetStreamHandler(handlerType, subject, stream, consumerConfig, natsSerializerRegistry);
+		AddJetStreamHandler(
+			handlerType,
+			subject,
+			stream,
+			consumerConfig,
+			natsSerializerRegistry,
+			handlerFactory);
 
 		return this;
 	}
@@ -140,7 +147,8 @@ public class NatsMessageQueueConfiguration
 		string subject,
 		string stream,
 		ConsumerConfig consumerConfig,
-		INatsSerializerRegistry? natsSerializerRegistry = null)
+		INatsSerializerRegistry? natsSerializerRegistry = null,
+		Delegate? handlerFactory = null)
 	{
 		var typeArguments = handlerType
 			.GetInterfaces()
@@ -150,13 +158,20 @@ public class NatsMessageQueueConfiguration
 			.Append(handlerType)
 			.ToArray();
 
+		var factory = handlerFactory
+			?? typeof(DefaultMessageHandlerFactory<>)
+				.MakeGenericType(handlerType)
+				.GetField("Default")!
+				.GetValue(null);
+
 		var registrationType = typeof(JetStreamHandlerRegistration<,>).MakeGenericType(typeArguments);
 
 		var registration = (ISubscribeRegistration?)Activator.CreateInstance(registrationType,
 			subject,
 			stream,
 			consumerConfig,
-			natsSerializerRegistry)
+			natsSerializerRegistry,
+			factory)
 			?? throw new InvalidOperationException($"Unable to create a registration for handler type {handlerType.FullName}");
 
 		m_SubscribeRegistrations.Add(registration);

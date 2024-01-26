@@ -13,6 +13,7 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 	private readonly string m_Stream;
 	private readonly ConsumerConfig m_ConsumerConfig;
 	private readonly INatsSerializerRegistry? m_NatsSerializerRegistry;
+	private readonly Func<IServiceProvider, THandler> m_HandlerFactory;
 
 	public string Subject { get; }
 
@@ -20,7 +21,8 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 		string subject,
 		string stream,
 		ConsumerConfig consumerConfig,
-		INatsSerializerRegistry? natsSerializerRegistry)
+		INatsSerializerRegistry? natsSerializerRegistry,
+		Func<IServiceProvider, THandler> handlerFactory)
 	{
 		if (string.IsNullOrEmpty(stream))
 			throw new ArgumentException($"'{nameof(stream)}' 不可為 Null 或空白。", nameof(stream));
@@ -29,6 +31,7 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 		m_Stream = stream;
 		m_ConsumerConfig = consumerConfig ?? throw new ArgumentNullException(nameof(consumerConfig));
 		m_NatsSerializerRegistry = natsSerializerRegistry;
+		m_HandlerFactory = handlerFactory ?? throw new ArgumentNullException(nameof(handlerFactory));
 	}
 
 	public async ValueTask<IDisposable?> SubscribeAsync(
@@ -79,7 +82,7 @@ internal class JetStreamHandlerRegistration<TMessage, THandler> : ISubscribeRegi
 		{
 			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
 			await using var d = scope.ConfigureAwait(false);
-			var handler = ActivatorUtilities.CreateInstance<THandler>(scope.ServiceProvider);
+			var handler = m_HandlerFactory(scope.ServiceProvider);
 			var natsSender = scope.ServiceProvider.GetRequiredService<INatsMessageQueueService>();
 
 			await handler.HandleAsync(
