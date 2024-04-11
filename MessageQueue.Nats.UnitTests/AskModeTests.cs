@@ -80,7 +80,7 @@ public class AskModeTests
         var actual = await sut.AskAsync<string, string>(
             "test",
             "aaa",
-            new[] { new MessageHeaderValue(MessageHeaderValueConsts.SessionAskKey, string.Empty) },
+            [new MessageHeaderValue(MessageHeaderValueConsts.SessionAskKey, string.Empty)],
             default);
 
         Assert.NotNull(actual);

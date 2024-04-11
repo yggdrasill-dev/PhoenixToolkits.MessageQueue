@@ -23,10 +23,10 @@ public class MultiplexerMessageSenderTests
 
         var sut = new MultiplexerMessageSender(
             fakeServiceProvider,
-            new[] {
+            [
                 exchange1,
                 exchange2
-            });
+            ]);
 
         await sut.PublishAsync("test", Array.Empty<byte>());
 
@@ -44,7 +44,7 @@ public class MultiplexerMessageSenderTests
 
         var sut = new MultiplexerMessageSender(
             fakeServiceProvider,
-            Array.Empty<IMessageExchange>());
+            []);
 
         _ = await Assert.ThrowsAsync<MessageSenderNotFoundException>(
             async () => await sut.PublishAsync("test", Array.Empty<byte>()));

@@ -8,3 +8,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE0301:簡化集合初始化")]
 [assembly: SuppressMessage("Style", "IDE0028:簡化集合初始化")]
 [assembly: SuppressMessage("Style", "IDE0290:使用主要建構函式")]
+[assembly: SuppressMessage("Style", "IDE0300:簡化集合初始化")]
