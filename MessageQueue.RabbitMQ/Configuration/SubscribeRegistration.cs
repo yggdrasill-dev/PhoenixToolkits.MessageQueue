@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +58,9 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.BasicProperties.Headers,
-			(headers, key) => (headers[key] as string) ?? string.Empty,
+			(headers, key) => headers.TryGetValue(key, out var data) && data is byte[] encodedData
+				? Encoding.UTF8.GetString(encodedData)
+				: string.Empty,
 			out var context)
 			? RabbitMQConnectionManager._RabbitMQActivitySource.StartActivity(
 				Subject,
