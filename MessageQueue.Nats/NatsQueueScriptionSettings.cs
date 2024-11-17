@@ -14,11 +14,11 @@ internal record NatsQueueScriptionSettings<TMessage>(
 
 		async void Core(CancellationToken token)
 		{
-			await foreach (var msg in connectionManager.Connection.SubscribeAsync<TMessage>(
+			await foreach (var msg in connectionManager.Connection.SubscribeAsync(
 				Subject,
 				Queue,
 				serializer: Deserializer,
-				cancellationToken: token))
+				cancellationToken: token).ConfigureAwait(false))
 			{
 				if (EventHandler is not null)
 					await EventHandler(msg, token).ConfigureAwait(false);

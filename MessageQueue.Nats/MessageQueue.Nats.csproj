@@ -1,11 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Valhalla.MessageQueue.Nats</RootNamespace>
-    <SqlQueryToolsConnectionString />
     <PackageId>PhoenixToolkits.MessageQueue.Nats</PackageId>
     <Version>2.2.0</Version>
     <Authors>Phoenix</Authors>

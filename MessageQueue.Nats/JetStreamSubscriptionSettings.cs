@@ -25,7 +25,9 @@ record JetStreamSubscriptionSettings<TMessage>(
 
 		async void Core(INatsJSConsumer jsConsumer, CancellationToken token)
 		{
-			await foreach (var msg in jsConsumer.ConsumeAsync<TMessage>(serializer: Deserializer, cancellationToken: token))
+			await foreach (var msg in jsConsumer.ConsumeAsync(
+				serializer: Deserializer,
+				cancellationToken: token).ConfigureAwait(false))
 			{
 				if (EventHandler is not null)
 					await EventHandler(msg, token).ConfigureAwait(false);
