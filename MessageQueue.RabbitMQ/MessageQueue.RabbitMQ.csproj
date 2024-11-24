@@ -7,7 +7,7 @@
     <SqlQueryToolsConnectionString />
     <RootNamespace>Valhalla.MessageQueue.RabbitMQ</RootNamespace>
     <PackageId>PhoenixToolkits.MessageQueue.RabbitMQ</PackageId>
-    <Version>2.3.0</Version>
+    <Version>2.3.1</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue.RabbitMQ</Product>

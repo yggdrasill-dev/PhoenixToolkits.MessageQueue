@@ -1,7 +1,5 @@
-﻿using System.Reflection.Metadata;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
-using Xunit;
+﻿using Microsoft.Extensions.DependencyInjection;
+using RabbitMQ.Client;
 
 namespace MessageQueue.RabbitMQ.UnitTests;
 
@@ -16,12 +14,8 @@ public partial class DependencyInjectionTests
         // Act
         sut.AddMessageQueue()
             .AddRabbitMessageQueue(configure => configure
-                .ConfigQueueOptions((options, sp) =>
-                {
-                    options.RabbitMQUrl = new Uri("http://rabbit-server-url");
-                    options.UserName = "account";
-                    options.Password = "password";
-                }));
+                .ConfigQueueOptions((options, sp) => options
+                    .BuildConnectionFactory = () => new ConnectionFactory()));
     }
 
     [Fact]

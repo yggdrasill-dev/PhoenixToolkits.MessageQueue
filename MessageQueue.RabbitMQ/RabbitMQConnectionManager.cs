@@ -27,15 +27,8 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 		m_Options = optionsAccessor.Value;
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-		var factory = new ConnectionFactory()
-		{
-			Uri = m_Options.RabbitMQUrl,
-			UserName = m_Options.UserName,
-			Password = m_Options.Password,
-			VirtualHost = m_Options.VirtualHost,
-			DispatchConsumersAsync = true
-		};
+		var factory = m_Options.BuildConnectionFactory();
+		factory.DispatchConsumersAsync = true;
 
 		m_Connection = factory.CreateConnection();
 		m_Connection.CallbackException += Connection_CallbackException;
@@ -61,15 +54,9 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 
 	public ValueTask<IDisposable> SubscribeAsync(RabbitSubscriptionSettings settings, CancellationToken cancellationToken = default)
 	{
-		var factory = new ConnectionFactory()
-		{
-			Uri = m_Options.RabbitMQUrl,
-			UserName = m_Options.UserName,
-			Password = m_Options.Password,
-			VirtualHost = m_Options.VirtualHost,
-			DispatchConsumersAsync = true,
-			ConsumerDispatchConcurrency = settings.ConsumerDispatchConcurrency
-		};
+		var factory = m_Options.BuildConnectionFactory();
+		factory.DispatchConsumersAsync = true;
+		factory.ConsumerDispatchConcurrency = settings.ConsumerDispatchConcurrency;
 
 		var connection = factory.CreateConnection();
 		var channel = connection.CreateModel();
