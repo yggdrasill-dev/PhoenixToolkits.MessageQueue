@@ -25,7 +25,7 @@ internal class RabbitGlobMessageExchange : IMessageExchange
 		return factory.CreateMessageQueueService(
 			 serviceProvider,
 			 m_ExchangeName,
-			 connectionManager.MessageQueueChannel);
+			 connectionManager.SenderChannel);
 	}
 
 	public bool Match(string subject, IEnumerable<MessageHeaderValue> header) => m_Glob.IsMatch(subject);

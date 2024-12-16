@@ -10,7 +10,7 @@ internal class MessageDataInfo
 
 	public CancellationToken CancellationToken { get; init; }
 
-	public IModel Channel { get; init; } = default!;
+	public IChannel Channel { get; init; } = default!;
 
 	public ILogger Logger { get; init; } = default!;
 

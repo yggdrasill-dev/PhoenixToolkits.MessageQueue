@@ -33,7 +33,7 @@ public class RabbitMessageQueueConfiguration
 	public RabbitMessageQueueConfiguration AddHandler<THandler>(
 		string queueName,
 		bool autoAck = true,
-		int dispatchConcurrency = 1,
+		ushort dispatchConcurrency = 1,
 		Func<IServiceProvider, THandler>? handlerFactory = null)
 	{
 		var handlerType = typeof(THandler);
@@ -52,7 +52,7 @@ public class RabbitMessageQueueConfiguration
 		Type handlerType,
 		string queueName,
 		bool autoAck = true,
-		int dispatchConcurrency = 1,
+		ushort dispatchConcurrency = 1,
 		Delegate? handlerFactory = null)
 	{
 		var typeArguments = handlerType

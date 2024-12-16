@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,17 +8,18 @@ using RabbitMQ.Client.Events;
 
 namespace Valhalla.MessageQueue.RabbitMQ;
 
-internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitSubscriptionSettings>
+internal class RabbitMQConnectionManager : IDisposable, IAsyncDisposable, IMessageReceiver<RabbitSubscriptionSettings>
 {
 	internal static readonly ActivitySource _RabbitMQActivitySource = new("Valhalla.MessageQueue.RabbitMQ");
 
-	private readonly IConnection m_Connection;
 	private readonly ILogger<RabbitMQConnectionManager> m_Logger;
 	private readonly RabbitMQOptions m_Options;
 	private readonly IServiceProvider m_ServiceProvider;
+	private IConnection? m_Connection;
 	private bool m_DisposedValue;
+	private IChannel? m_DeclareChannel;
 
-	public IModel MessageQueueChannel { get; }
+	public IChannel SenderChannel { get; private set; } = default!;
 
 	public RabbitMQConnectionManager(
 		IServiceProvider serviceProvider,
@@ -27,21 +29,45 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 		m_Options = optionsAccessor.Value;
 		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+	}
+
+	public async Task StartAsync(CancellationToken cancellationToken = default)
+	{
 		var factory = m_Options.BuildConnectionFactory();
-		factory.DispatchConsumersAsync = true;
 
-		m_Connection = factory.CreateConnection();
-		m_Connection.CallbackException += Connection_CallbackException;
-		m_Connection.ConnectionBlocked += Connection_ConnectionBlocked;
-		m_Connection.ConnectionShutdown += Connection_ConnectionShutdown;
-		m_Connection.ConnectionUnblocked += Connection_ConnectionUnblocked;
+		m_Connection = await factory.CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
+		m_Connection.CallbackExceptionAsync += Connection_CallbackExceptionAsync;
+		m_Connection.ConnectionBlockedAsync += Connection_ConnectionBlockedAsync;
+		m_Connection.ConnectionShutdownAsync += Connection_ConnectionShutdownAsync;
+		m_Connection.ConnectionUnblockedAsync += Connection_ConnectionUnblockedAsync;
 
-		MessageQueueChannel = m_Connection.CreateModel();
+		m_DeclareChannel = await m_Connection.CreateChannelAsync(
+			cancellationToken: cancellationToken).ConfigureAwait(false);
 
-		MessageQueueChannel.CallbackException += Connection_CallbackException;
-		MessageQueueChannel.ModelShutdown += MessageQueueChannel_ModelShutdown;
+		m_DeclareChannel.CallbackExceptionAsync += MessageQueueChannel_CallbackExceptionAsync;
+		m_DeclareChannel.ChannelShutdownAsync += MessageQueueChannel_ModelShutdownAsync;
 
-		m_Options.OnSetupQueueAndExchange?.Invoke(MessageQueueChannel);
+		m_Options.OnSetupQueueAndExchange?.Invoke(m_DeclareChannel);
+
+		SenderChannel = await m_Connection.CreateChannelAsync(
+			cancellationToken: cancellationToken).ConfigureAwait(false);
+	}
+
+	public async Task StopAsync(CancellationToken cancellationToken = default)
+	{
+		if (m_DeclareChannel is not null)
+		{
+			await m_DeclareChannel.CloseAsync(cancellationToken).ConfigureAwait(false);
+			await m_DeclareChannel.DisposeAsync().ConfigureAwait(false);
+			m_DeclareChannel = null;
+		}
+
+		if (m_Connection is not null)
+		{
+			await m_Connection.CloseAsync(cancellationToken).ConfigureAwait(false);
+			await m_Connection.DisposeAsync().ConfigureAwait(false);
+			m_Connection = null;
+		}
 	}
 
 	public void Dispose()
@@ -52,29 +78,38 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 		GC.SuppressFinalize(this);
 	}
 
-	public ValueTask<IDisposable> SubscribeAsync(RabbitSubscriptionSettings settings, CancellationToken cancellationToken = default)
+	public async ValueTask<IDisposable> SubscribeAsync(RabbitSubscriptionSettings settings, CancellationToken cancellationToken = default)
 	{
 		var factory = m_Options.BuildConnectionFactory();
-		factory.DispatchConsumersAsync = true;
 		factory.ConsumerDispatchConcurrency = settings.ConsumerDispatchConcurrency;
 
-		var connection = factory.CreateConnection();
-		var channel = connection.CreateModel();
+		var connection = await factory.CreateConnectionAsync(
+			cancellationToken).ConfigureAwait(false);
+		var channel = await connection.CreateChannelAsync(
+			cancellationToken: cancellationToken).ConfigureAwait(false);
 		var consumer = new AsyncEventingBasicConsumer(channel);
-		consumer.Received += (sender, args) => settings.EventHandler(channel, args);
+		consumer.ReceivedAsync += (sender, args) => settings.EventHandler(channel, args);
 
-		var consumerTag = channel.BasicConsume(
+		var consumerTag = await channel.BasicConsumeAsync(
 			queue: settings.Subject,
 			autoAck: settings.AutoAck,
-			consumer: consumer);
+			consumer: consumer,
+			cancellationToken).ConfigureAwait(false);
 
-		return ValueTask.FromResult<IDisposable>(
-			new RabbitSubscription(
-				settings.Subject,
-				connection,
-				channel,
-				consumerTag,
-				m_ServiceProvider.GetRequiredService<ILogger<RabbitSubscription>>()));
+		return new RabbitSubscription(
+			settings.Subject,
+			connection,
+			channel,
+			consumerTag,
+			m_ServiceProvider.GetRequiredService<ILogger<RabbitSubscription>>());
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		await CoreDisposeAsync().ConfigureAwait(false);
+
+		Dispose(disposing: false);
+		GC.SuppressFinalize(this);
 	}
 
 	protected virtual void Dispose(bool disposing)
@@ -85,39 +120,75 @@ internal class RabbitMQConnectionManager : IDisposable, IMessageReceiver<RabbitS
 			{
 				m_Logger.LogWarning($"{nameof(RabbitMQConnectionManager)} disposing.");
 
-				MessageQueueChannel?.Close();
-				MessageQueueChannel?.Dispose();
+				if (m_DeclareChannel is IDisposable disposableChannel)
+				{
+					disposableChannel.Dispose();
+					m_DeclareChannel = null;
+				}
 
-				m_Connection.Close();
-				m_Connection.Dispose();
+				if (m_Connection is IDisposable disposableConnection)
+				{
+					disposableConnection.Dispose();
+					m_Connection = null;
+				}
 			}
 
 			m_DisposedValue = true;
 		}
 	}
 
-	private void Connection_CallbackException(object? sender, CallbackExceptionEventArgs e)
+	protected async ValueTask CoreDisposeAsync()
+	{
+		if (m_DeclareChannel is not null)
+		{
+			await m_DeclareChannel.CloseAsync().ConfigureAwait(false);
+			await m_DeclareChannel.DisposeAsync().ConfigureAwait(false);
+		}
+
+		m_DeclareChannel = null;
+
+		if (m_Connection is not null)
+		{
+			await m_Connection.CloseAsync().ConfigureAwait(false);
+			await m_Connection.DisposeAsync().ConfigureAwait(false);
+		}
+
+		m_Connection = null;
+	}
+
+	private Task MessageQueueChannel_CallbackExceptionAsync(object sender, CallbackExceptionEventArgs args)
+	{
+		m_Logger.LogError(args.Exception, "MessageQueueChannel CallbackExceptionEvent");
+		return Task.CompletedTask;
+	}
+
+	private Task Connection_CallbackExceptionAsync(object? sender, CallbackExceptionEventArgs e)
 	{
 		m_Logger.LogError(e.Exception, "Sender CallbackExceptionEvent");
+		return Task.CompletedTask;
 	}
 
-	private void Connection_ConnectionBlocked(object? sender, ConnectionBlockedEventArgs e)
+	private Task Connection_ConnectionBlockedAsync(object? sender, ConnectionBlockedEventArgs e)
 	{
 		m_Logger.LogInformation("Sender ConnectionBlockedEvent, Reason: {reason}", e.Reason);
+		return Task.CompletedTask;
 	}
 
-	private void Connection_ConnectionShutdown(object? sender, ShutdownEventArgs e)
+	private Task Connection_ConnectionShutdownAsync(object? sender, ShutdownEventArgs e)
 	{
 		m_Logger.LogInformation("Sender ConnectionShutdownEvent");
+		return Task.CompletedTask;
 	}
 
-	private void Connection_ConnectionUnblocked(object? sender, EventArgs e)
+	private Task Connection_ConnectionUnblockedAsync(object? sender, AsyncEventArgs e)
 	{
 		m_Logger.LogInformation("Sender ConnectionUnblockedEvent");
+		return Task.CompletedTask;
 	}
 
-	private void MessageQueueChannel_ModelShutdown(object? sender, ShutdownEventArgs e)
+	private Task MessageQueueChannel_ModelShutdownAsync(object? sender, ShutdownEventArgs e)
 	{
-		m_Logger.LogInformation("Sender ModelShutdownEvent");
+		m_Logger.LogInformation("Sender ChanndelShutdownEvent");
+		return Task.CompletedTask;
 	}
 }

@@ -4,6 +4,6 @@ namespace Valhalla.MessageQueue.RabbitMQ;
 
 internal class NoopMessageQueueServiceFactory : IMessageQueueServiceFactory
 {
-	public IMessageQueueService CreateMessageQueueService(IServiceProvider serviceProvider, string exchangeName, IModel channel)
+	public IMessageQueueService CreateMessageQueueService(IServiceProvider serviceProvider, string exchangeName, IChannel channel)
 		=> new NoopMessageQueueService();
 }

@@ -11,7 +11,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 {
 	private static readonly Random _Random = new();
 	private readonly bool m_AutoAck;
-	private readonly int m_DispatchConcurrency;
+	private readonly ushort m_DispatchConcurrency;
 	private readonly Func<IServiceProvider, THandler> m_HandlerFactory;
 
 	public string Subject { get; }
@@ -19,7 +19,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 	public SubscribeRegistration(
 		string subject,
 		bool autoAck,
-		int dispatchConcurrency,
+		ushort dispatchConcurrency,
 		Func<IServiceProvider, THandler> handlerFactory)
 	{
 		if (string.IsNullOrEmpty(subject))
@@ -58,7 +58,8 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(dataInfo.CancellationToken);
 		using var activity = TraceContextPropagator.TryExtract(
 			dataInfo.Args.BasicProperties.Headers,
-			(headers, key) => headers.TryGetValue(key, out var data) && data is byte[] encodedData
+			(headers, key) => headers?.TryGetValue(key, out var data) == true 
+				&& data is byte[] encodedData
 				? Encoding.UTF8.GetString(encodedData)
 				: string.Empty,
 			out var context)
@@ -83,7 +84,7 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 		try
 		{
 			var scope = dataInfo.ServiceProvider.CreateAsyncScope();
-			await using (scope.ConfigureAwait(false))
+			await using (scope.ConfigureAwait(continueOnCapturedContext: false))
 			{
 				var handler = m_HandlerFactory(scope.ServiceProvider);
 				var serializeRegistration = scope.ServiceProvider.GetRequiredService<IRabbitMQSerializerRegistry>();
@@ -95,12 +96,15 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 					dataInfo.Args.RoutingKey,
 					msg!,
 					dataInfo.Args.BasicProperties.Headers
-						?.Select(kv => new MessageHeaderValue(kv.Key, kv.Value.ToString())),
+						?.Select(kv => new MessageHeaderValue(kv.Key, kv.Value?.ToString())),
 					cts.Token)
 					.ConfigureAwait(false);
 
 				if (!m_AutoAck)
-					dataInfo.Channel.BasicAck(dataInfo.Args.DeliveryTag, false);
+					await dataInfo.Channel.BasicAckAsync(
+						dataInfo.Args.DeliveryTag,
+						false,
+						dataInfo.CancellationToken).ConfigureAwait(false);
 			}
 		}
 		catch (Exception ex)
@@ -112,7 +116,11 @@ internal class SubscribeRegistration<TMessage, THandler> : ISubscribeRegistratio
 			{
 				await Task.Delay(_Random.Next(1, 5) * 1000).ConfigureAwait(false);
 
-				dataInfo.Channel.BasicNack(dataInfo.Args.DeliveryTag, false, true);
+				await dataInfo.Channel.BasicNackAsync(
+					dataInfo.Args.DeliveryTag,
+					false,
+					true,
+					dataInfo.CancellationToken).ConfigureAwait(false);
 			}
 
 			foreach (var handler in dataInfo.ServiceProvider.GetServices<ExceptionHandler>())

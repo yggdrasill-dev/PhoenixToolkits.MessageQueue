@@ -4,5 +4,5 @@ namespace Valhalla.MessageQueue.RabbitMQ;
 
 internal interface IMessageQueueServiceFactory
 {
-	IMessageQueueService CreateMessageQueueService(IServiceProvider serviceProvider, string exchangeName, IModel channel);
+	IMessageQueueService CreateMessageQueueService(IServiceProvider serviceProvider, string exchangeName, IChannel channel);
 }

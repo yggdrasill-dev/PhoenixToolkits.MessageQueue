@@ -40,11 +40,16 @@ public class HandlerTests
             .Do(callInfo =>
             {
                 var settings = callInfo.Arg<RabbitSubscriptionSettings>();
-                settings.EventHandler(Substitute.For<IModel>(), new BasicDeliverEventArgs
-                {
-                    BasicProperties = Substitute.For<IBasicProperties>(),
-                    Body = Encoding.UTF8.GetBytes(message)
-                });
+                settings.EventHandler(
+                    Substitute.For<IChannel>(),
+                    new BasicDeliverEventArgs(
+                        "consumer",
+                        1,
+                        false,
+                        "exchange",
+                        "test",
+                        new BasicProperties(),
+                        Encoding.UTF8.GetBytes(message)));
             });
         // Act
         _ = await sut.SubscribeAsync(

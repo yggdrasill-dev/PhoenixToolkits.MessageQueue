@@ -4,39 +4,33 @@ using Valhalla.MessageQueue.RabbitMQ.Configuration;
 
 namespace Valhalla.MessageQueue.RabbitMQ;
 
-internal class MessageQueueBackground : BackgroundService
+internal class MessageQueueBackground(
+	IMessageReceiver<RabbitSubscriptionSettings> messageReceiver,
+	IServiceProvider serviceProvider,
+	IEnumerable<ISubscribeRegistration> subscribes,
+	RabbitMQConnectionManager rabbitMQConnectionManager,
+	ILogger<MessageQueueBackground> logger)
+	: BackgroundService
 {
-	private readonly ILogger<MessageQueueBackground> m_Logger;
-	private readonly IMessageReceiver<RabbitSubscriptionSettings> m_MessageReceiver;
-	private readonly IServiceProvider m_ServiceProvider;
-	private readonly IEnumerable<ISubscribeRegistration> m_Subscribes;
-
-	public MessageQueueBackground(
-		IMessageReceiver<RabbitSubscriptionSettings> messageReceiver,
-		IServiceProvider serviceProvider,
-		IEnumerable<ISubscribeRegistration> subscribes,
-		ILogger<MessageQueueBackground> logger)
-	{
-		m_MessageReceiver = messageReceiver ?? throw new ArgumentNullException(nameof(messageReceiver));
-		m_ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-		m_Subscribes = subscribes ?? throw new ArgumentNullException(nameof(subscribes));
-		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-	}
-
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
+		await rabbitMQConnectionManager.StartAsync(
+			stoppingToken).ConfigureAwait(false);
+
 		var subscriptions = new List<IDisposable>();
 
-		foreach (var registration in m_Subscribes)
+		foreach (var registration in subscribes)
 			subscriptions.Add(
 				await registration.SubscribeAsync(
-					m_MessageReceiver,
-					m_ServiceProvider,
-					m_Logger,
+					messageReceiver,
+					serviceProvider,
+					logger,
 					stoppingToken).ConfigureAwait(false));
 
 		_ = stoppingToken.Register(() =>
 		{
+			rabbitMQConnectionManager.StopAsync().Wait();
+
 			foreach (var sub in subscriptions)
 				sub.Dispose();
 		});

@@ -6,7 +6,7 @@ namespace Valhalla.MessageQueue.RabbitMQ;
 
 internal class RabbitSubscription : IDisposable
 {
-	private readonly IModel m_Channel;
+	private readonly IChannel m_Channel;
 	private readonly IConnection m_Connection;
 	private readonly string m_ConsumerTag;
 	private readonly ILogger<RabbitSubscription> m_Logger;
@@ -16,7 +16,7 @@ internal class RabbitSubscription : IDisposable
 	public RabbitSubscription(
 		string subject,
 		IConnection connection,
-		IModel channel,
+		IChannel channel,
 		string consumerTag,
 		ILogger<RabbitSubscription> logger)
 	{
@@ -26,13 +26,13 @@ internal class RabbitSubscription : IDisposable
 		m_ConsumerTag = consumerTag;
 		m_Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-		m_Connection.CallbackException += Connection_CallbackException;
-		m_Connection.ConnectionBlocked += Connection_ConnectionBlocked;
-		m_Connection.ConnectionShutdown += Connection_ConnectionShutdown;
-		m_Connection.ConnectionUnblocked += Connection_ConnectionUnblocked;
+		m_Connection.CallbackExceptionAsync += Connection_CallbackExceptionAsync;
+		m_Connection.ConnectionBlockedAsync += Connection_ConnectionBlockedAsync;
+		m_Connection.ConnectionShutdownAsync += Connection_ConnectionShutdownAsync;
+		m_Connection.ConnectionUnblockedAsync += Connection_ConnectionUnblockedAsync;
 
-		m_Channel.CallbackException += Connection_CallbackException;
-		m_Channel.ModelShutdown += Channel_ModelShutdown;
+		m_Channel.CallbackExceptionAsync += Connection_CallbackExceptionAsync;
+		m_Channel.CallbackExceptionAsync += Connection_CallbackExceptionAsync;
 	}
 
 	public void Dispose()
@@ -48,7 +48,7 @@ internal class RabbitSubscription : IDisposable
 		{
 			if (disposing)
 			{
-				m_Channel.BasicCancel(m_ConsumerTag);
+				m_Channel.BasicCancelAsync(m_ConsumerTag);
 
 				m_Connection.Dispose();
 				m_Channel.Dispose();
@@ -58,28 +58,27 @@ internal class RabbitSubscription : IDisposable
 		}
 	}
 
-	private void Channel_ModelShutdown(object? sender, ShutdownEventArgs e)
+	private Task Connection_ConnectionShutdownAsync(object? sender, ShutdownEventArgs e)
 	{
-		m_Logger.LogInformation("Receiver({_subject}) ModelShutdownEvent", m_Subject);
+		m_Logger.LogInformation("Receiver({Subject}) ConnectionShutdownEvent", m_Subject);
+		return Task.CompletedTask;
 	}
 
-	private void Connection_CallbackException(object? sender, CallbackExceptionEventArgs e)
+	private Task Connection_ConnectionUnblockedAsync(object? sender, AsyncEventArgs e)
 	{
-		m_Logger.LogError(e.Exception, "Receiver({_subject}) CallbackExceptionEvent", m_Subject);
+		m_Logger.LogInformation("Receiver({Subject}) ConnectionUnblockedEvent", m_Subject);
+		return Task.CompletedTask;
 	}
 
-	private void Connection_ConnectionBlocked(object? sender, ConnectionBlockedEventArgs e)
+	private Task Connection_ConnectionBlockedAsync(object? sender, ConnectionBlockedEventArgs e)
 	{
-		m_Logger.LogInformation("Receiver({_subject}) ConnectionBlockedEvent, Reason: {e.Reason}", m_Subject, e.Reason);
+		m_Logger.LogInformation("Receiver({Subject}) ConnectionBlockedEvent, Reason: {Reason}", m_Subject, e.Reason);
+		return Task.CompletedTask;
 	}
 
-	private void Connection_ConnectionShutdown(object? sender, ShutdownEventArgs e)
+	private Task Connection_CallbackExceptionAsync(object? sender, CallbackExceptionEventArgs e)
 	{
-		m_Logger.LogInformation("Receiver({_subject}) ConnectionShutdownEvent", m_Subject);
-	}
-
-	private void Connection_ConnectionUnblocked(object? sender, EventArgs e)
-	{
-		m_Logger.LogInformation("Receiver({_subject}) ConnectionUnblockedEvent", m_Subject);
+		m_Logger.LogError(e.Exception, "Receiver({Subject}) CallbackExceptionEvent", m_Subject);
+		return Task.CompletedTask;
 	}
 }

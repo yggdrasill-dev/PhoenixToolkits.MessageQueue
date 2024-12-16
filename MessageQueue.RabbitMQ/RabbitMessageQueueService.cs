@@ -2,19 +2,12 @@
 
 namespace Valhalla.MessageQueue.RabbitMQ;
 
-internal class RabbitMessageQueueService : IMessageQueueService
+internal class RabbitMessageQueueService(
+	string exchangeName,
+	IChannel channel,
+	IRabbitMQSerializerRegistry serializerRegistry)
+	: IMessageQueueService
 {
-	private readonly IModel m_Channel;
-	private readonly IRabbitMQSerializerRegistry m_SerializerRegistry;
-	private readonly string m_ExchangeName;
-
-	public RabbitMessageQueueService(string exchangeName, IModel channel, IRabbitMQSerializerRegistry serializerRegistry)
-	{
-		m_Channel = channel ?? throw new ArgumentNullException(nameof(channel));
-		m_SerializerRegistry = serializerRegistry ?? throw new ArgumentNullException(nameof(serializerRegistry));
-		m_ExchangeName = exchangeName ?? throw new ArgumentNullException(nameof(exchangeName));
-	}
-
 	public ValueTask<Answer<TReply>> AskAsync<TMessage, TReply>(
 		string subject,
 		TMessage data,
@@ -22,7 +15,7 @@ internal class RabbitMessageQueueService : IMessageQueueService
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	public ValueTask PublishAsync<TMessage>(
+	public async ValueTask PublishAsync<TMessage>(
 		string subject,
 		TMessage data,
 		IEnumerable<MessageHeaderValue> header,
@@ -45,10 +38,14 @@ internal class RabbitMessageQueueService : IMessageQueueService
 
 		cancellationToken.ThrowIfCancellationRequested();
 
-		var binaryData = m_SerializerRegistry.GetSerializer<TMessage>().Serialize(data);
-		m_Channel.BasicPublish(m_ExchangeName, subject, properties, binaryData);
-
-		return ValueTask.CompletedTask;
+		var binaryData = serializerRegistry.GetSerializer<TMessage>().Serialize(data);
+		await channel.BasicPublishAsync(
+			exchangeName,
+			subject,
+			false,
+			properties,
+			binaryData,
+			cancellationToken).ConfigureAwait(false);
 	}
 
 	public ValueTask<TReply> RequestAsync<TMessage, TReply>(
@@ -65,10 +62,14 @@ internal class RabbitMessageQueueService : IMessageQueueService
 		CancellationToken cancellationToken)
 		=> throw new NotSupportedException();
 
-	private IBasicProperties BuildBasicProperties(IEnumerable<MessageHeaderValue> header)
+	private static BasicProperties BuildBasicProperties(IEnumerable<MessageHeaderValue> header)
 	{
-		var properties = m_Channel.CreateBasicProperties();
-		properties.Headers = header.ToDictionary(v => v.Name, v => (object?)v.Value);
+		var properties = new BasicProperties
+		{
+			Headers = header.ToDictionary(
+				v => v.Name,
+				v => (object?)v.Value)
+		};
 
 		return properties;
 	}

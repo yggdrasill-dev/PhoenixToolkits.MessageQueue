@@ -12,7 +12,7 @@ public class RabbitMessageQueueServiceTests
     public async Task RabbitMessageQueueService_送出訊息()
     {
         // Arrange
-        var fakeChannel = Substitute.For<IModel>();
+        var fakeChannel = Substitute.For<IChannel>();
 
         var sut = new RabbitMessageQueueService(
             "test",
@@ -21,18 +21,17 @@ public class RabbitMessageQueueServiceTests
 
         var data = Encoding.UTF8.GetBytes("aaa");
 
-        _ = fakeChannel.CreateBasicProperties()
-            .Returns(Substitute.For<IBasicProperties>());
-
         // Act
         await sut.PublishAsync("a.b.c", data);
 
         // Assert
-        fakeChannel.Received(1)
-            .BasicPublish(
+        _ = fakeChannel.Received(1)
+            .BasicPublishAsync(
                 Arg.Is("test"),
                 Arg.Is("a.b.c"),
-                Arg.Any<IBasicProperties>(),
-                Arg.Is<ReadOnlyMemory<byte>>(x => x.ToArray().SequenceEqual(data)));
+                Arg.Is(false),
+                Arg.Any<BasicProperties>(),
+                Arg.Is<ReadOnlyMemory<byte>>(x => x.ToArray().SequenceEqual(data)),
+                Arg.Any<CancellationToken>());
     }
 }
