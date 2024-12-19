@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
@@ -6,11 +6,10 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Valhalla.MessageQueue</RootNamespace>
     <PackageId>PhoenixToolkits.MessageQueue</PackageId>
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue</Product>
-    <SqlQueryToolsConnectionString />
     <PackageProjectUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue</PackageProjectUrl>
     <RepositoryUrl>https://github.com/yggdrasill-dev/PhoenixToolkits.MessageQueue.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>

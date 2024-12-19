@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -46,12 +45,12 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 	public MessageResult Process(ProcessContext processContext)
 	{
 		using var activity = TraceContextPropagator.TryExtract(
-			processContext.Data<MongoMessage<byte[]>>(),
-			(p, key) => key switch
+			processContext.Data<MongoMessage<byte[]>>().Headers?.ToLookup(v => v.Name, v => v.Value),
+			(headers, key) =>
 			{
-				TraceContextPropagator.TraceParent => p.TraceParent!,
-				TraceContextPropagator.TraceState => p.TraceState!,
-				_ => string.Empty
+				var header = headers?.FirstOrDefault(h => h.Key == key);
+
+				return header?.FirstOrDefault();
 			},
 			out var context)
 			? MongoDBMessageQueueConfiguration._MongoActivitySource.StartActivity(
@@ -74,7 +73,7 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 
 		try
 		{
-			var payload = MessageSubscriber<TMessage, TReceiver>.GetMongoMessage<TMessage>(processContext);
+			var payload = GetMongoMessage<TMessage>(processContext);
 
 			Task.Run(async () =>
 			{
@@ -137,8 +136,6 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 			{
 				Headers = payload.Headers,
 				Subject = payload.Subject,
-				TraceParent = payload.TraceParent,
-				TraceState = payload.TraceState,
 				Data = Unsafe.As<Memory<byte>, T>(ref messageData),
 			};
 		}
@@ -153,8 +150,6 @@ internal class MessageSubscriber<TMessage, TReceiver> : IMessageSubscriber, IAsy
 			{
 				Headers = payload.Headers,
 				Subject = payload.Subject,
-				TraceParent = payload.TraceParent,
-				TraceState = payload.TraceState,
 				Data = Unsafe.As<ReadOnlyMemory<byte>, T>(ref messageData),
 			};
 		}

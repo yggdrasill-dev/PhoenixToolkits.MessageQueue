@@ -1,4 +1,5 @@
-﻿using Valhalla.Messages;
+﻿using System.Diagnostics;
+using Valhalla.Messages;
 
 namespace Valhalla.MessageQueue.InProcess;
 

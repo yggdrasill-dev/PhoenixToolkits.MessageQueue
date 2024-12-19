@@ -38,7 +38,7 @@ internal class MessageQueueBackground : BackgroundService
 					using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
 					using var activity = TraceContextPropagator.TryExtract(
 						msg.MessageHeaders.ToLookup(hv => hv.Name, hv => hv.Value),
-						(header, key) => string.Join(", ", header[key]),
+						(header, key) => header[key]?.FirstOrDefault(),
 						out var context)
 						? InProcessDiagnostics.ActivitySource.StartActivity(
 							msg.Subject,

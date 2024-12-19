@@ -6,9 +6,5 @@ internal class MongoMessage<TData>
 
 	public string Subject { get; init; } = default!;
 
-	public string? TraceParent { get; internal set; }
-
-	public string? TraceState { get; internal set; }
-
 	public MessageHeaderValue[]? Headers { get; internal set; }
 }

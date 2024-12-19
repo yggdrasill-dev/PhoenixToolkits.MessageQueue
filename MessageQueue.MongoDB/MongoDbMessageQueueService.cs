@@ -31,30 +31,23 @@ internal class MongoDbMessageQueueService : IMessageSender
 
 		cancellationToken.ThrowIfCancellationRequested();
 
+		var headerValues = new List<MessageHeaderValue>(header);
+
+		TraceContextPropagator.Inject(
+			activity,
+			headerValues,
+			(msg, key, value) =>
+			{
+				if (!string.IsNullOrEmpty(value))
+					headerValues.Add(new MessageHeaderValue(key, value));
+			});
+
 		var mongoMsg = new MongoMessage<TMessage>
 		{
 			Subject = subject,
 			Data = data,
-			Headers = header.ToArray()
+			Headers = [.. headerValues]
 		};
-
-		TraceContextPropagator.Inject(
-			activity,
-			mongoMsg,
-			(msg, key, value) =>
-			{
-				if (!string.IsNullOrEmpty(value))
-					switch (key)
-					{
-						case TraceContextPropagator.TraceParent:
-							msg.TraceParent = value;
-							break;
-
-						case TraceContextPropagator.TraceState:
-							msg.TraceState = value;
-							break;
-					}
-			});
 
 		var message = await m_MongoMessageQueue.Publish(m => m
 			.Queue(m_QueueName)

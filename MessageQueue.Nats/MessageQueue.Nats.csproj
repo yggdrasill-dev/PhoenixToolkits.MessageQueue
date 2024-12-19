@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Valhalla.MessageQueue.Nats</RootNamespace>
     <PackageId>PhoenixToolkits.MessageQueue.Nats</PackageId>
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
     <Authors>Phoenix</Authors>
     <Company>Valhalla</Company>
     <Product>PhoenixToolkits.MessageQueue.Nats</Product>
